@@ -6,7 +6,7 @@
 **Skills practiced:** Console navigation, policy reading, CLI credential verification, least-privilege reasoning
 
 > **Note on permissions:** Your attendee policy intentionally **prevents you from creating or modifying IAM resources**.  
-> This is a shared account — IAM write access for 22 attendees would be a security incident waiting to happen.  
+> This is a shared account — IAM write access for 25 attendees would be a security incident waiting to happen.  
 > In this lab you will explore, inspect, and verify the roles that have been set up for you.
 
 ---
