@@ -114,7 +114,7 @@ For each service below, navigate to the console page and answer the checkpoint q
 
 **What to observe:**
 - The query editor is where you run SQL against S3 data via the Glue Data Catalog
-- Notice the **Workgroup** selector (top-right of editor). Yours is `traineeNN-<BATCH_ID>-workgroup` (provisioned on Day 19).
+- Notice the **Workgroup** selector (top-right of editor). Yours is `traineeNN-2026-03-workgroup` (provisioned on Day 19).
 
 **Checkpoint questions:**
 1. Athena is described as "serverless." What do you think this means in terms of infrastructure you manage?
@@ -221,12 +221,12 @@ After **Day 15**, the instructor will have set up these roles for you:
 
 | Role Name | Purpose |
 |---|---|
-| `traineeNN-<BATCH_ID>-glue-service-role` | Glue crawlers and ETL jobs |
-| `traineeNN-<BATCH_ID>-emr-service-role` | EMR cluster management |
-| `traineeNN-<BATCH_ID>-emr-ec2-role` | EMR EC2 worker nodes |
-| `traineeNN-<BATCH_ID>-redshift-s3-role` | Redshift COPY/Spectrum access |
-| `traineeNN-<BATCH_ID>-lakeformation-role` | Lake Formation service |
-| `traineeNN-<BATCH_ID>-firehose-role` | Amazon Data Firehose delivery |
+| `traineeNN-2026-03-glue-service-role` | Glue crawlers and ETL jobs |
+| `traineeNN-2026-03-emr-service-role` | EMR cluster management |
+| `traineeNN-2026-03-emr-ec2-role` | EMR EC2 worker nodes |
+| `traineeNN-2026-03-redshift-s3-role` | Redshift COPY/Spectrum access |
+| `traineeNN-2026-03-lakeformation-role` | Lake Formation service |
+| `traineeNN-2026-03-firehose-role` | Amazon Data Firehose delivery |
 
 > If you don't see these yet — the instructor hasn't provisioned them yet. This is covered in detail on **Day 15**.
 

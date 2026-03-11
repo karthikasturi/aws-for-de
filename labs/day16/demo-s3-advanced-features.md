@@ -49,7 +49,7 @@ CloudFront + Origin Access Control (OAC) is the correct pattern.
 
 | Field | Value |
 |---|---|
-| **Origin domain** | `trainee01-<BATCH_ID>-raw.s3.ap-south-1.amazonaws.com` |
+| **Origin domain** | `trainee01-2026-03-raw.s3.ap-south-1.amazonaws.com` |
 | **Origin access** | **Origin access control settings (recommended)** |
 | **Origin access control** | Create new OAC (name: `demo-day16-oac`) |
 | **Viewer protocol policy** | Redirect HTTP to HTTPS |
@@ -77,7 +77,7 @@ Click **Copy policy** and show the JSON:
         "Service": "cloudfront.amazonaws.com"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::trainee01-<BATCH_ID>-raw/*",
+      "Resource": "arn:aws:s3:::trainee01-2026-03-raw/*",
       "Condition": {
         "StringEquals": {
           "AWS:SourceArn": "arn:aws:cloudfront::<ACCOUNT_ID>:distribution/EXAMPLEDIST"
@@ -223,7 +223,7 @@ Typical benefit: 50–500% faster uploads for large files from distant regions.
 1. Go to any S3 bucket → **Properties** → **Transfer acceleration** → **Edit**
 2. Enable it — S3 generates an accelerated endpoint:
    ```
-   trainee01-<BATCH_ID>-raw.s3-accelerate.amazonaws.com
+   trainee01-2026-03-raw.s3-accelerate.amazonaws.com
    ```
 3. Show the [S3 Transfer Acceleration Speed Comparison Tool](https://s3-accelerate-speedtest.s3-accelerate.amazonaws.com/en/accelerate-speed-comparsion.html) — compares direct vs accelerated upload from your browser's location
 

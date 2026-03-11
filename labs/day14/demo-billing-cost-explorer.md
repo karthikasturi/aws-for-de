@@ -77,7 +77,7 @@ aws sts get-caller-identity
 
 2. **Group by dimension** — Change "Group by" to:
    - `Service` (default) — see S3 vs EC2 vs Redshift
-   - `Tag: Batch` — confirm the `<BATCH_ID>` tag groups all lab resources
+   - `Tag: Batch` — confirm the `2026-03` tag groups all lab resources
    - `Tag: Environment` — confirm `training` tag is applied everywhere
 
 3. **Filter by tag** — Filter to `Environment = training`
@@ -88,7 +88,7 @@ aws sts get-caller-identity
 
 ### Key talking points
 
-> "Cost Explorer uses the tags applied to every resource. Every resource has `Environment=training`, `Batch=<BATCH_ID>`, and `ManagedBy=lab`. This is why tagging discipline is not optional — it directly enables cost attribution and chargeback."
+> "Cost Explorer uses the tags applied to every resource. Every resource has `Environment=training`, `Batch=2026-03`, and `ManagedBy=lab`. This is why tagging discipline is not optional — it directly enables cost attribution and chargeback."
 
 ---
 
@@ -144,7 +144,7 @@ When creating a budget, you can set multiple alert thresholds:
    | Tag key | Value | Purpose |
    |---|---|---|
    | `Environment` | `training` | Isolates lab costs from any other usage in the account |
-   | `Batch` | `<BATCH_ID>` | Groups all resources belonging to this training cohort |
+   | `Batch` | `2026-03` | Groups all resources belonging to this training cohort |
    | `ManagedBy` | `lab` | Indicates lab-managed resource |
 3. Without activating tags here in the Billing console, they don't appear in Cost Explorer reports. This is an AWS quirk — tag activation is a one-time billing console step.
 

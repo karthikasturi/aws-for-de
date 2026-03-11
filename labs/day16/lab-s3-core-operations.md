@@ -7,12 +7,59 @@
 
 ---
 
+## Lab Setup
+
+### Configure your AWS CLI
+
+> **Already done on Day 15?** If your profile is still active, just verify it:
+> ```bash
+> export AWS_PROFILE=aws-de-lab
+> aws sts get-caller-identity
+> ```
+> If this returns your `traineeNN` ARN, skip to Part 1. If not, re-run `aws configure` below.
+
+In your workstation terminal (or local terminal):
+
+```bash
+aws configure --profile aws-de-lab
+```
+
+Enter the values from your credential sheet:
+
+```
+AWS Access Key ID:     <your-access-key-id>
+AWS Secret Access Key: <your-secret-access-key>
+Default region name:   ap-south-1
+Default output format: json
+```
+
+Verify your identity:
+
+```bash
+export AWS_PROFILE=aws-de-lab
+aws sts get-caller-identity
+```
+
+Expected output:
+
+```json
+{
+    "UserId": "AIDAXXXXXXXXXXXXXXXXX",
+    "Account": "<ACCOUNT_ID>",
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/traineeNN"
+}
+```
+
+> Replace `traineeNN` with your actual attendee ID throughout this lab.
+
+---
+
 ## Overview
 
 In this lab you will work entirely within your own pre-provisioned S3 buckets. You will practice the full object lifecycle — upload, version, archive, secure, and monitor — using both the AWS Console and the AWS CLI.
 
 > **Your bucket namespace**  
-> All your buckets follow the pattern: `traineeNN-<BATCH_ID>-<descriptor>`  
+> All your buckets follow the pattern: `traineeNN-2026-03-<descriptor>`  
 > Replace `traineeNN` with your actual attendee ID throughout this lab (e.g. `trainee05`).
 
 ---
@@ -23,13 +70,13 @@ Before this lab starts, the instructor has created these 7 buckets for each atte
 
 | Bucket name | Purpose | Versioning | Lifecycle |
 |---|---|---|---|
-| `traineeNN-<BATCH_ID>-raw` | Raw ingested data | ✅ Enabled | None |
-| `traineeNN-<BATCH_ID>-transformed` | Processed/clean data | ✅ Enabled | None |
-| `traineeNN-<BATCH_ID>-scripts` | Glue/EMR job scripts | ✅ Enabled | None |
-| `traineeNN-<BATCH_ID>-logs` | Application logs | ❌ Off | Delete after **30 days** |
-| `traineeNN-<BATCH_ID>-athena-output` | Athena query results | ❌ Off | Delete after **7 days** |
-| `traineeNN-<BATCH_ID>-glue-temp` | Glue temp storage | ❌ Off | Delete after **3 days** |
-| `traineeNN-<BATCH_ID>-firehose-landing` | Kinesis Firehose output | ❌ Off | None |
+| `traineeNN-2026-03-raw` | Raw ingested data | ✅ Enabled | None |
+| `traineeNN-2026-03-transformed` | Processed/clean data | ✅ Enabled | None |
+| `traineeNN-2026-03-scripts` | Glue/EMR job scripts | ✅ Enabled | None |
+| `traineeNN-2026-03-logs` | Application logs | ❌ Off | Delete after **30 days** |
+| `traineeNN-2026-03-athena-output` | Athena query results | ❌ Off | Delete after **7 days** |
+| `traineeNN-2026-03-glue-temp` | Glue temp storage | ❌ Off | Delete after **3 days** |
+| `traineeNN-2026-03-firehose-landing` | Kinesis Firehose output | ❌ Off | None |
 
 All buckets have:
 - Public access **fully blocked** (all four ACL/policy settings)
@@ -48,7 +95,7 @@ All buckets have:
 
 ### 1.2 Inspect your raw bucket
 
-1. Click `traineeNN-<BATCH_ID>-raw`
+1. Click `traineeNN-2026-03-raw`
 2. Click the **Properties** tab — scroll through:
    - **Bucket Versioning** → should show `Enabled`
    - **Default encryption** → should show `SSE-KMS` with your batch key alias
@@ -59,13 +106,13 @@ All buckets have:
 
 ### 1.3 Inspect a bucket with a lifecycle rule
 
-1. Click `traineeNN-<BATCH_ID>-logs`
+1. Click `traineeNN-2026-03-logs`
 2. Click the **Management** tab → **Lifecycle rules**
 3. Click the `delete-after-30-days` rule — observe:
    - **Filter scope:** all objects (empty prefix = bucket-wide)
    - **Expiration:** 30 days after creation
    - **Transition rules:** none
-4. Repeat for `traineeNN-<BATCH_ID>-athena-output` (7-day delete) and `traineeNN-<BATCH_ID>-glue-temp` (3-day delete)
+4. Repeat for `traineeNN-2026-03-athena-output` (7-day delete) and `traineeNN-2026-03-glue-temp` (3-day delete)
 
 > **Discussion point:** Why does the Athena output bucket expire objects after 7 days? Why does glue-temp expire after 3?
 
@@ -86,7 +133,7 @@ CMT,2024-02-01 12:45:00,2024-02-01 13:10:00,1,5.80,-73.9772,40.7527,-73.8900,40.
 
 ### 2.2 Upload via Console
 
-1. In your `traineeNN-<BATCH_ID>-raw` bucket, click **Upload**
+1. In your `traineeNN-2026-03-raw` bucket, click **Upload**
 2. Click **Add files** → select `trip_update.csv`
 3. Expand **Properties** (before clicking Upload):
    - **Storage class:** keep as `Standard`
@@ -111,7 +158,7 @@ CMT,2024-02-01 12:45:00,2024-02-01 13:10:00,1,5.80,-73.9772,40.7527,-73.8900,40.
 ### 2.5 Copy object to another prefix
 
 1. Select `trip_update.csv` → click **Actions** → **Copy**
-2. Set destination: `s3://traineeNN-<BATCH_ID>-raw/archive/trip_update.csv`
+2. Set destination: `s3://traineeNN-2026-03-raw/archive/trip_update.csv`
 3. Click **Copy**
 4. Browse into the `archive/` prefix — confirm the copy exists
 
@@ -166,15 +213,15 @@ To "restore" an older version, you simply copy it on top of the current version:
 ```bash
 # CLI method — get the version ID of the version you want to restore
 aws s3api list-object-versions \
-  --bucket traineeNN-<BATCH_ID>-raw \
+  --bucket traineeNN-2026-03-raw \
   --prefix trip_update.csv \
   --query 'Versions[*].[VersionId,LastModified]' \
   --output table
 
 # Copy the desired version back to the same key (this creates a new latest version)
 aws s3api copy-object \
-  --bucket traineeNN-<BATCH_ID>-raw \
-  --copy-source "traineeNN-<BATCH_ID>-raw/trip_update.csv?versionId=<VERSION_ID>" \
+  --bucket traineeNN-2026-03-raw \
+  --copy-source "traineeNN-2026-03-raw/trip_update.csv?versionId=<VERSION_ID>" \
   --key trip_update.csv
 ```
 
@@ -195,7 +242,7 @@ You will add a lifecycle rule to your `raw` bucket to transition objects older t
 
 ### 4.1 Create the rule in the Console
 
-1. In `traineeNN-<BATCH_ID>-raw` → **Management** → **Lifecycle rules** → **Create lifecycle rule**
+1. In `traineeNN-2026-03-raw` → **Management** → **Lifecycle rules** → **Create lifecycle rule**
 2. Fill in:
 
 | Field | Value |
@@ -246,13 +293,13 @@ The S3 storage class hierarchy from most to least frequent access (and highest t
 
 ### 5.1 View encryption configuration in the Console
 
-1. Go to `traineeNN-<BATCH_ID>-raw` → **Properties** → **Default encryption**
+1. Go to `traineeNN-2026-03-raw` → **Properties** → **Default encryption**
 2. Note:
    - Encryption type: **SSE-KMS**
-   - AWS KMS key: the ARN of your batch KMS key (`alias/aws-de-lab-<BATCH_ID>-traineeNN`)
+   - AWS KMS key: the ARN of your batch KMS key (`alias/aws-de-lab-2026-03-traineeNN`)
    - **Bucket Key:** Enabled (reduces KMS API calls by generating a short-lived bucket-level key — reduces cost)
 
-3. Repeat for `traineeNN-<BATCH_ID>-scripts` — same configuration
+3. Repeat for `traineeNN-2026-03-scripts` — same configuration
 
 ### 5.2 Inspect the KMS key via CLI
 
@@ -264,7 +311,7 @@ aws kms list-aliases --query "Aliases[?contains(AliasName, 'aws-de-lab')]" --out
 
 # Describe the key
 aws kms describe-key \
-  --key-id "alias/aws-de-lab-<BATCH_ID>-traineeNN" \
+  --key-id "alias/aws-de-lab-2026-03-traineeNN" \
   --query 'KeyMetadata.{KeyId:KeyId, Description:Description, KeyState:KeyState, KeyRotation:KeyRotationStatus}' \
   --output table
 ```
@@ -274,7 +321,7 @@ aws kms describe-key \
 ### 5.3 Try to disable the KMS key (expect failure)
 
 ```bash
-aws kms disable-key --key-id "alias/aws-de-lab-<BATCH_ID>-traineeNN"
+aws kms disable-key --key-id "alias/aws-de-lab-2026-03-traineeNN"
 ```
 
 Expected response:
@@ -293,11 +340,11 @@ Server access logging records all requests made to your bucket. You will enable 
 
 ### 6.1 Enable via Console
 
-1. Go to `traineeNN-<BATCH_ID>-raw` → **Properties**
+1. Go to `traineeNN-2026-03-raw` → **Properties**
 2. Scroll to **Server access logging** → click **Edit**
 3. Set:
    - **Server access logging:** Enable
-   - **Target bucket:** `traineeNN-<BATCH_ID>-logs`
+   - **Target bucket:** `traineeNN-2026-03-logs`
    - **Target prefix:** `s3-access-logs/raw/`
 4. Click **Save changes**
 
@@ -312,12 +359,12 @@ Server access logging records all requests made to your bucket. You will enable 
 > **Wait 5–15 minutes** — access logs are delivered on a best-effort basis, typically within 15 minutes.
 
 After waiting:
-1. Go to `traineeNN-<BATCH_ID>-logs`
+1. Go to `traineeNN-2026-03-logs`
 2. Browse the `s3-access-logs/raw/` prefix
 3. Download a log file — each line is one request:
 
 ```
-traineeNN-<BATCH_ID>-raw [15/Feb/2024:08:30:01 +0000] 203.0.113.5 arn:aws:iam::<ACCOUNT_ID>:user/traineeNN REST.PUT.OBJECT trip_update.csv "PUT /trip_update.csv HTTP/1.1" 200 - - 1234 120 - "-" "aws-cli/2.x" - ...
+traineeNN-2026-03-raw [15/Feb/2024:08:30:01 +0000] 203.0.113.5 arn:aws:iam::<ACCOUNT_ID>:user/traineeNN REST.PUT.OBJECT trip_update.csv "PUT /trip_update.csv HTTP/1.1" 200 - - 1234 120 - "-" "aws-cli/2.x" - ...
 ```
 
 ---
@@ -328,7 +375,7 @@ This part proves that S3 resource isolation works — your prefix-scoped IAM pol
 
 ### 7.1 Try to list another attendee's bucket (Console)
 
-1. In the S3 console bucket list, click on `trainee01-<BATCH_ID>-raw` (use a different attendee's bucket)
+1. In the S3 console bucket list, click on `trainee01-2026-03-raw` (use a different attendee's bucket)
 2. Expected result: the console shows an error or empty Objects tab with "Access Denied"
 
 ### 7.2 Confirm AccessDenied via CLI
@@ -337,10 +384,10 @@ This part proves that S3 resource isolation works — your prefix-scoped IAM pol
 export AWS_PROFILE=aws-de-lab
 
 # Your own bucket — should succeed
-aws s3 ls s3://traineeNN-<BATCH_ID>-raw/
+aws s3 ls s3://traineeNN-2026-03-raw/
 
 # Another attendee's bucket — should fail
-aws s3 ls s3://trainee01-<BATCH_ID>-raw/
+aws s3 ls s3://trainee01-2026-03-raw/
 ```
 
 Expected output for the second command:
@@ -351,10 +398,10 @@ Access Denied
 
 ### 7.3 Why does this work?
 
-Walk through the IAM policy evaluation for `s3:ListBucket` on `trainee01-<BATCH_ID>-raw`:
+Walk through the IAM policy evaluation for `s3:ListBucket` on `trainee01-2026-03-raw`:
 
 1. **Explicit Deny?** → The `DenyIAMWriteOrgAccount` statement denies IAM actions only. No S3 deny exists.
-2. **Explicit Allow?** → The `S3OwnBuckets` statement allows `s3:*` on `arn:aws:s3:::traineeNN-*`. The bucket `trainee01-<BATCH_ID>-raw` does NOT match your prefix (`traineeNN-*`).
+2. **Explicit Allow?** → The `S3OwnBuckets` statement allows `s3:*` on `arn:aws:s3:::traineeNN-*`. The bucket `trainee01-2026-03-raw` does NOT match your prefix (`traineeNN-*`).
 3. **Default implicit deny** → No Allow matches → **AccessDenied**. ✅
 
 ### 7.4 Presigned URLs — Temporary Object Sharing
@@ -363,11 +410,11 @@ A presigned URL embeds credentials that allow temporary, unauthenticated access 
 
 ```bash
 # Generate a presigned URL valid for 5 minutes (300 seconds)
-aws s3 presign s3://traineeNN-<BATCH_ID>-raw/trip_update.csv \
+aws s3 presign s3://traineeNN-2026-03-raw/trip_update.csv \
   --expires-in 300
 
 # Output will look like:
-# https://traineeNN-<BATCH_ID>-raw.s3.ap-south-1.amazonaws.com/trip_update.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256&...
+# https://traineeNN-2026-03-raw.s3.ap-south-1.amazonaws.com/trip_update.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256&...
 ```
 
 1. Copy the output URL and open it in a browser **incognito window** (no AWS session)
@@ -384,7 +431,7 @@ Quick reference for the most common S3 CLI patterns you will use throughout the 
 
 ```bash
 export AWS_PROFILE=aws-de-lab
-export BUCKET="traineeNN-<BATCH_ID>-raw"
+export BUCKET="traineeNN-2026-03-raw"
 
 # List all your buckets
 aws s3 ls | grep traineeNN
@@ -406,7 +453,7 @@ aws s3 sync ./local-folder/ s3://$BUCKET/folder/
 
 # Copy between buckets (within your prefix)
 aws s3 cp s3://$BUCKET/datasets/trip_update.csv \
-  s3://traineeNN-<BATCH_ID>-transformed/datasets/trip_update.csv
+  s3://traineeNN-2026-03-transformed/datasets/trip_update.csv
 
 # Delete an object
 aws s3 rm s3://$BUCKET/datasets/trip_update.csv
@@ -438,7 +485,7 @@ Before finishing, verify:
 - [ ] The `archive-old-data` lifecycle rule is active on your raw bucket
 - [ ] You confirmed your KMS key is configured and rotation is enabled
 - [ ] Server access logging is enabled on your raw bucket
-- [ ] `aws s3 ls s3://trainee01-<BATCH_ID>-raw/` returns **AccessDenied**
+- [ ] `aws s3 ls s3://trainee01-2026-03-raw/` returns **AccessDenied**
 - [ ] You generated a working presigned URL and it expired after 5 minutes
 
 ---

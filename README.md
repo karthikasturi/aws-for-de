@@ -2,7 +2,7 @@
 
 Training guides for the 7-day AWS Data Engineering course.
 
-**Account:** `<ACCOUNT_ID>` | **Region:** `ap-south-1` (Mumbai) | **Batch:** `<BATCH_ID>`
+**Account:** `<ACCOUNT_ID>` | **Region:** `ap-south-1` (Mumbai) | **Batch:** `2026-03`
 
 ---
 

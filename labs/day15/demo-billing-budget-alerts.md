@@ -49,7 +49,7 @@ Before opening the console, explain the cost risks specific to this lab:
 2. Highlight **Service charges** table — sorted by cost
    - For a day-1 lab: should be near $0
    - For an in-progress lab: show EC2 (workstations), any running Redshift/RDS
-3. Point out the **Cost by tag** section — scroll to find `Batch: <BATCH_ID>` and `Environment: training`
+3. Point out the **Cost by tag** section — scroll to find `Batch: 2026-03` and `Environment: training`
 
 **Talking point:**
 > "Notice how the tag filter immediately isolates our training lab spend from everything else in the account. This is exactly why tagging is a first-class concern, not an afterthought."
@@ -70,7 +70,7 @@ Choose template: **Monthly cost budget**
 
 | Field | Value | Explanation |
 |---|---|---|
-| **Budget name** | `aws-de-lab-<BATCH_ID>-monthly` | Descriptive, includes batch ID |
+| **Budget name** | `aws-de-lab-2026-03-monthly` | Descriptive, includes batch ID |
 | **Budgeted amount** | `$150` | Estimated maximum for 7-day lab with 22 attendees |
 | **Email recipients** | Instructor email(s) | Comma-separated for multiple |
 
@@ -135,7 +135,7 @@ Every resource in the lab is tagged with three standard tags at creation time:
 | Tag key | Value |
 |---|---|
 | `Environment` | `training` |
-| `Batch` | `<BATCH_ID>` |
+| `Batch` | `2026-03` |
 | `ManagedBy` | `lab` |
 
 For these tags to appear as filterable dimensions in Cost Explorer and Budgets, they must be **activated** here in the Billing console.
@@ -198,7 +198,7 @@ aws budgets describe-budgets --account-id <ACCOUNT_ID>
 # View current month cost by service (requires ce:GetCostAndUsage)
 # Note: ce:* is not in attendee policy — this will fail as expected
 aws ce get-cost-and-usage \
-  --time-period Start=<BATCH_ID>-01,End=<BATCH_ID>-31 \
+  --time-period Start=2026-03-01,End=2026-03-31 \
   --granularity MONTHLY \
   --metrics UnblendedCost \
   --group-by Type=DIMENSION,Key=SERVICE
@@ -219,17 +219,17 @@ export AWS_PROFILE=aws-de-lab
 # Day 16 — S3 buckets stay (needed for all subsequent days)
 # Day 17 evening — delete each attendee's RDS instance:
 aws rds delete-db-instance \
-  --db-instance-identifier traineeNN-<BATCH_ID>-rds \
+  --db-instance-identifier traineeNN-2026-03-rds \
   --skip-final-snapshot
 
 # Day 18 evening — delete each attendee's Redshift cluster:
 aws redshift delete-cluster \
-  --cluster-identifier traineeNN-<BATCH_ID>-redshift \
+  --cluster-identifier traineeNN-2026-03-redshift \
   --skip-final-cluster-snapshot
 
 # Day 20 evening — delete Kinesis streams and Firehose:
-aws kinesis delete-stream --stream-name traineeNN-<BATCH_ID>-stream
-aws firehose delete-delivery-stream --delivery-stream-name traineeNN-<BATCH_ID>-firehose
+aws kinesis delete-stream --stream-name traineeNN-2026-03-stream
+aws firehose delete-delivery-stream --delivery-stream-name traineeNN-2026-03-firehose
 ```
 
 > Repeat each CLI command for all 22 attendees, or run a loop: `for n in $(seq -w 1 22); do aws ... trainee${n}-...; done`

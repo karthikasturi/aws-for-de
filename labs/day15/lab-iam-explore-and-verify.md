@@ -62,18 +62,18 @@ You should see **6 roles**:
 
 | Role Name | Purpose |
 |---|---|
-| `trainee01-<BATCH_ID>-glue-service-role` | Glue crawlers and ETL jobs |
-| `trainee01-<BATCH_ID>-emr-service-role` | EMR cluster management |
-| `trainee01-<BATCH_ID>-emr-ec2-role` | EMR EC2 worker nodes |
-| `trainee01-<BATCH_ID>-redshift-s3-role` | Redshift COPY and Spectrum |
-| `trainee01-<BATCH_ID>-lakeformation-role` | Lake Formation service |
-| `trainee01-<BATCH_ID>-firehose-role` | Amazon Data Firehose delivery |
+| `trainee01-2026-03-glue-service-role` | Glue crawlers and ETL jobs |
+| `trainee01-2026-03-emr-service-role` | EMR cluster management |
+| `trainee01-2026-03-emr-ec2-role` | EMR EC2 worker nodes |
+| `trainee01-2026-03-redshift-s3-role` | Redshift COPY and Spectrum |
+| `trainee01-2026-03-lakeformation-role` | Lake Formation service |
+| `trainee01-2026-03-firehose-role` | Amazon Data Firehose delivery |
 
 > If you see **0 roles**, let the instructor know — the role provisioning step has not been completed yet.
 
 ### 1.2 Deep-dive: Glue Service Role
 
-1. Click `trainee01-<BATCH_ID>-glue-service-role`
+1. Click `trainee01-2026-03-glue-service-role`
 2. Go to the **Trust relationships** tab
 
 **Question 1:** What principal is listed as trusted? What does this mean?
@@ -115,7 +115,7 @@ They contain `placeholder-bucket-not-yet-created`. This is a safe fallback value
 <details>
 <summary>Answer</summary>
 
-`arn:aws:iam::<ACCOUNT_ID>:role/trainee01-<BATCH_ID>-glue-service-role` — the role's own ARN. This allows the role to "pass itself" to Glue jobs. Without this, even a valid AWS principal with IAM permissions would get `AccessDenied` when trying to create a Glue job referencing this role.
+`arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-glue-service-role` — the role's own ARN. This allows the role to "pass itself" to Glue jobs. Without this, even a valid AWS principal with IAM permissions would get `AccessDenied` when trying to create a Glue job referencing this role.
 
 </details>
 
@@ -123,11 +123,11 @@ They contain `placeholder-bucket-not-yet-created`. This is a safe fallback value
 
 ### 1.3 Deep-dive: EMR Roles
 
-1. Click `trainee01-<BATCH_ID>-emr-service-role`
+1. Click `trainee01-2026-03-emr-service-role`
 2. Note the trust: `elasticmapreduce.amazonaws.com`
 3. Navigate to **Instance profiles** (left sidebar in IAM)
-4. Search for `trainee01` — find `trainee01-<BATCH_ID>-emr-instance-profile`
-5. Click it — note it wraps `trainee01-<BATCH_ID>-emr-ec2-role`
+4. Search for `trainee01` — find `trainee01-2026-03-emr-instance-profile`
+5. Click it — note it wraps `trainee01-2026-03-emr-ec2-role`
 
 **Question 4:** Why does EMR need two separate IAM identities (a service role AND an EC2 instance profile)?
 
@@ -146,7 +146,7 @@ They have different trust principals and different permission sets. Pre-deprecat
 
 ### 1.4 Inspect the Redshift Role
 
-1. Click `trainee01-<BATCH_ID>-redshift-s3-role`
+1. Click `trainee01-2026-03-redshift-s3-role`
 2. Open the inline policy JSON
 3. Find the `RedshiftSpectrum` statement
 
@@ -176,19 +176,19 @@ Expected output:
 --------------------------------------------------------------------------------------------------------------
 |                                               ListRoles                                                    |
 +-------------------------------------------+-----------------------------------------------------------------+
-|  trainee01-<BATCH_ID>-emr-ec2-role           |  arn:aws:iam::<ACCOUNT_ID>:role/trainee01-<BATCH_ID>-emr-ec2-role  |
-|  trainee01-<BATCH_ID>-emr-service-role       |  ...                                                            |
-|  trainee01-<BATCH_ID>-firehose-role          |  ...                                                            |
-|  trainee01-<BATCH_ID>-glue-service-role      |  ...                                                            |
-|  trainee01-<BATCH_ID>-lakeformation-role     |  ...                                                            |
-|  trainee01-<BATCH_ID>-redshift-s3-role       |  ...                                                            |
+|  trainee01-2026-03-emr-ec2-role           |  arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-emr-ec2-role  |
+|  trainee01-2026-03-emr-service-role       |  ...                                                            |
+|  trainee01-2026-03-firehose-role          |  ...                                                            |
+|  trainee01-2026-03-glue-service-role      |  ...                                                            |
+|  trainee01-2026-03-lakeformation-role     |  ...                                                            |
+|  trainee01-2026-03-redshift-s3-role       |  ...                                                            |
 +-------------------------------------------+-----------------------------------------------------------------+
 ```
 
 ### 2.2 Get a specific role
 
 ```bash
-aws iam get-role --role-name trainee01-<BATCH_ID>-glue-service-role
+aws iam get-role --role-name trainee01-2026-03-glue-service-role
 ```
 
 Examine the `AssumeRolePolicyDocument` field — this is the trust policy.
@@ -196,14 +196,14 @@ Examine the `AssumeRolePolicyDocument` field — this is the trust policy.
 ### 2.3 List inline policies on a role
 
 ```bash
-aws iam list-role-policies --role-name trainee01-<BATCH_ID>-glue-service-role
+aws iam list-role-policies --role-name trainee01-2026-03-glue-service-role
 ```
 
 ### 2.4 Read an inline policy document
 
 ```bash
 aws iam get-role-policy \
-  --role-name trainee01-<BATCH_ID>-glue-service-role \
+  --role-name trainee01-2026-03-glue-service-role \
   --policy-name glue-inline-policy
 ```
 
@@ -217,7 +217,7 @@ This returns the permission policy JSON. Count the `Statement` array entries —
 ### 2.5 List managed policy attachments
 
 ```bash
-aws iam list-attached-role-policies --role-name trainee01-<BATCH_ID>-glue-service-role
+aws iam list-attached-role-policies --role-name trainee01-2026-03-glue-service-role
 ```
 
 ---
@@ -262,7 +262,7 @@ iam:CreateRole because no identity-based policy allows the iam:CreateRole action
 
 ```bash
 # Attempt to view another attendee's resources (SHOULD FAIL)
-aws s3 ls s3://trainee02-<BATCH_ID>-raw/
+aws s3 ls s3://trainee02-2026-03-raw/
 
 # Attempt to create a budget (SHOULD FAIL)
 aws budgets create-budget \
@@ -290,23 +290,23 @@ Work through this policy evaluation exercise mentally:
 You are `trainee01`. You run:
 
 ```bash
-aws s3 ls s3://trainee01-<BATCH_ID>-raw/
+aws s3 ls s3://trainee01-2026-03-raw/
 ```
 
 **Policy evaluation steps (answer each):**
 
-1. Is there an explicit **Deny** matching `s3:ListBucket` on `trainee01-<BATCH_ID>-raw`? → `DenyIAMWriteOrgAccount` only denies IAM actions, so: **No**
+1. Is there an explicit **Deny** matching `s3:ListBucket` on `trainee01-2026-03-raw`? → `DenyIAMWriteOrgAccount` only denies IAM actions, so: **No**
 2. Is there an explicit **Allow**? → Check `S3OwnBuckets` statement: `"arn:aws:s3:::trainee01-*"` matches → **Yes**
 3. Result: **Allow**
 
 Now try:
 
 ```bash
-aws s3 ls s3://trainee02-<BATCH_ID>-raw/
+aws s3 ls s3://trainee02-2026-03-raw/
 ```
 
 1. Explicit Deny? No IAM deny covers S3 on other-attendee buckets directly
-2. Explicit Allow? `S3OwnBuckets` is `trainee01-*` — `trainee02-<BATCH_ID>-raw` does **not** match
+2. Explicit Allow? `S3OwnBuckets` is `trainee01-*` — `trainee02-2026-03-raw` does **not** match
 3. Result: **Implicit Deny** (no Allow → default deny)
 
 **Question 7:** What is the difference between an **explicit deny** and an **implicit deny** in IAM?
@@ -325,8 +325,8 @@ aws s3 ls s3://trainee02-<BATCH_ID>-raw/
 
 1. In IAM console → **Instance profiles** (left sidebar, scroll down under "Access management")
 2. Search `trainee01`
-3. Click `trainee01-<BATCH_ID>-emr-instance-profile`
-4. Note the **Role** listed — should be `trainee01-<BATCH_ID>-emr-ec2-role`
+3. Click `trainee01-2026-03-emr-instance-profile`
+4. Note the **Role** listed — should be `trainee01-2026-03-emr-ec2-role`
 
 **Why the instance profile wrapper?**  
 EC2 instances cannot directly assume IAM roles. Amazon EC2 uses the **instance profile** as the mechanism to inject role credentials into an EC2 instance's metadata endpoint (`http://169.254.169.254/latest/meta-data/iam/security-credentials/`). EMR worker nodes retrieve their S3/CloudWatch credentials from this endpoint automatically.

@@ -149,7 +149,7 @@ Show the generated trust policy JSON:
 
 ### 3.3 Add an inline policy for S3 access
 
-5. Role name: `trainee01-<BATCH_ID>-glue-service-role` → **Create role**
+5. Role name: `trainee01-2026-03-glue-service-role` → **Create role**
 6. Click into the newly created role → **Add permissions** → **Create inline policy**
 7. Switch to **JSON** tab and paste:
 
@@ -162,17 +162,17 @@ Show the generated trust policy JSON:
       "Effect": "Allow",
       "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
       "Resource": [
-        "arn:aws:s3:::trainee01-<BATCH_ID>-raw",
-        "arn:aws:s3:::trainee01-<BATCH_ID>-raw/*",
-        "arn:aws:s3:::trainee01-<BATCH_ID>-transformed",
-        "arn:aws:s3:::trainee01-<BATCH_ID>-transformed/*"
+        "arn:aws:s3:::trainee01-2026-03-raw",
+        "arn:aws:s3:::trainee01-2026-03-raw/*",
+        "arn:aws:s3:::trainee01-2026-03-transformed",
+        "arn:aws:s3:::trainee01-2026-03-transformed/*"
       ]
     },
     {
       "Sid": "AllowPassRole",
       "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/trainee01-<BATCH_ID>-glue-service-role"
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-glue-service-role"
     }
   ]
 }
@@ -188,9 +188,9 @@ Explain the two-role EMR pattern (no need to create these — they are already p
 
 | Role | Trust principal | Purpose |
 |---|---|---|
-| `traineeNN-<BATCH_ID>-emr-service-role` | `elasticmapreduce.amazonaws.com` | **Cluster controller** — spins up/down EC2 instances, configures networking, manages SGs |
-| `traineeNN-<BATCH_ID>-emr-ec2-role` | `ec2.amazonaws.com` | **Worker nodes** — reads/writes S3, pushes logs to CloudWatch |
-| `traineeNN-<BATCH_ID>-emr-instance-profile` | wraps `emr-ec2-role` | **Instance profile** — the mechanism that attaches the EC2 role to the actual EC2 instances in the cluster |
+| `traineeNN-2026-03-emr-service-role` | `elasticmapreduce.amazonaws.com` | **Cluster controller** — spins up/down EC2 instances, configures networking, manages SGs |
+| `traineeNN-2026-03-emr-ec2-role` | `ec2.amazonaws.com` | **Worker nodes** — reads/writes S3, pushes logs to CloudWatch |
+| `traineeNN-2026-03-emr-instance-profile` | wraps `emr-ec2-role` | **Instance profile** — the mechanism that attaches the EC2 role to the actual EC2 instances in the cluster |
 
 **Key point:** The instance profile is a container for one IAM role. EC2 instances cannot directly use an IAM role — they need an instance profile wrapper.
 
@@ -205,7 +205,7 @@ export AWS_PROFILE=aws-de-lab
 
 # List all lab roles
 aws iam list-roles \
-  --query "Roles[?contains(RoleName, '<BATCH_ID>')].[RoleName]" \
+  --query "Roles[?contains(RoleName, '2026-03')].[RoleName]" \
   --output table | head -50
 ```
 
@@ -213,7 +213,7 @@ You should see 6 roles × 22 attendees = **132 role entries** total.
 
 **Per attendee, the following 15 IAM resources exist:**
 
-> Each attendee's resources are isolated by prefix (e.g. `trainee01-<BATCH_ID>-*`). No attendee can see or modify another's roles — their IAM user policy restricts all IAM write actions.
+> Each attendee's resources are isolated by prefix (e.g. `trainee01-2026-03-*`). No attendee can see or modify another's roles — their IAM user policy restricts all IAM write actions.
 
 ### IAM resources per attendee
 
@@ -241,7 +241,7 @@ You should see 6 roles × 22 attendees = **132 role entries** total.
 
 1. Navigate to **IAM → Roles**
 2. Search for `trainee01`
-3. Show `trainee01-<BATCH_ID>-glue-service-role`
+3. Show `trainee01-2026-03-glue-service-role`
 4. Click the role → **Trust relationships** tab → show `glue.amazonaws.com` trust
 5. Click **Permissions** tab → show inline policy + managed policy attachment
 6. Click the inline policy → **JSON** → walk through the S3 ARNs
@@ -304,9 +304,9 @@ aws iam list-roles \
 
 After the Day 16 S3 buckets are provisioned, update the inline policies for each attendee's Glue and EMR EC2 roles:
 
-1. **IAM Console** → **Roles** → open `traineeNN-<BATCH_ID>-glue-service-role`
+1. **IAM Console** → **Roles** → open `traineeNN-2026-03-glue-service-role`
 2. Click the inline policy → **Edit**
-3. Replace placeholder ARNs with real bucket ARNs (format: `arn:aws:s3:::traineeNN-<BATCH_ID>-raw`)
+3. Replace placeholder ARNs with real bucket ARNs (format: `arn:aws:s3:::traineeNN-2026-03-raw`)
 4. Click **Save changes**
 5. Repeat for each attendee and each affected role
 
