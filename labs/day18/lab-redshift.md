@@ -136,6 +136,16 @@ Expected output:
 
 Query Editor v2 is the browser-based SQL editor for Redshift — no local client required.
 
+> **Why QEv2 and psql use different users**  
+> Query Editor v2 authenticates via **IAM** (`GetClusterCredentialsWithIAM`), which creates a
+> separate Redshift database user named `IAMR:traineeNN`. Your psql sessions connect
+> as `labadmin` (the master user). These are two different DB users.
+>
+> The lab cluster's `init.sql` grants `PUBLIC` access to both `trainee_schema` and `public`,
+> so tables you create as `labadmin` (via psql) **are** visible in QEv2. If the left-panel
+> schema browser doesn't immediately refresh, click the **↻ Refresh** icon next to the
+> schema name.
+
 ### Connect via console
 
 1. Open **AWS Console** → **Amazon Redshift**
@@ -144,8 +154,7 @@ Query Editor v2 is the browser-based SQL editor for Redshift — no local client
 4. Connection settings:
    - **Cluster:** `traineeNN-2026-03-redshift`
    - **Database:** `labdb`
-   - **User name:** `labadmin`
-   - **Password:** (from Secrets Manager above)
+   - **Authentication:** `Temporary credentials` (uses your IAM identity)
 5. Click **Create connection**
 
 ### Run a quick test
