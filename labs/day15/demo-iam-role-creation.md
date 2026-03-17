@@ -13,6 +13,8 @@
 
 ```bash
 export AWS_PROFILE=aws-de-lab
+export PREFIX=trainee01   # change if demonstrating a different attendee
+export BATCH=2026-03
 aws sts get-caller-identity
 # Must return Account: "<ACCOUNT_ID>"
 ```
@@ -56,7 +58,7 @@ Trust Policy  → answers: "Who can assume this role?"
                 Example: "glue.amazonaws.com may assume this role"
 
 Permission Policy → answers: "What can the role do once assumed?"
-                   Example: "Read from s3://trainee01-raw-bucket"
+                   Example: "Read from s3://$PREFIX-$BATCH-raw"
 ```
 
 ---
@@ -149,7 +151,7 @@ Show the generated trust policy JSON:
 
 ### 3.3 Add an inline policy for S3 access
 
-5. Role name: `trainee01-2026-03-glue-service-role` → **Create role**
+5. Role name: `$PREFIX-$BATCH-glue-service-role` → **Create role**
 6. Click into the newly created role → **Add permissions** → **Create inline policy**
 7. Switch to **JSON** tab and paste:
 
@@ -162,17 +164,17 @@ Show the generated trust policy JSON:
       "Effect": "Allow",
       "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
       "Resource": [
-        "arn:aws:s3:::trainee01-2026-03-raw",
-        "arn:aws:s3:::trainee01-2026-03-raw/*",
-        "arn:aws:s3:::trainee01-2026-03-transformed",
-        "arn:aws:s3:::trainee01-2026-03-transformed/*"
+        "arn:aws:s3:::$PREFIX-$BATCH-raw",
+        "arn:aws:s3:::$PREFIX-$BATCH-raw/*",
+        "arn:aws:s3:::$PREFIX-$BATCH-transformed",
+        "arn:aws:s3:::$PREFIX-$BATCH-transformed/*"
       ]
     },
     {
       "Sid": "AllowPassRole",
       "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-glue-service-role"
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-glue-service-role"
     }
   ]
 }
@@ -213,7 +215,7 @@ You should see 6 roles × 22 attendees = **132 role entries** total.
 
 **Per attendee, the following 15 IAM resources exist:**
 
-> Each attendee's resources are isolated by prefix (e.g. `trainee01-2026-03-*`). No attendee can see or modify another's roles — their IAM user policy restricts all IAM write actions.
+> Each attendee's resources are isolated by prefix (e.g. `$PREFIX-$BATCH-*`). No attendee can see or modify another's roles.
 
 ### IAM resources per attendee
 
@@ -240,8 +242,8 @@ You should see 6 roles × 22 attendees = **132 role entries** total.
 ## Part 5: Verify in the Console (5 min)
 
 1. Navigate to **IAM → Roles**
-2. Search for `trainee01`
-3. Show `trainee01-2026-03-glue-service-role`
+2. Search for `$PREFIX`
+3. Show `$PREFIX-$BATCH-glue-service-role`
 4. Click the role → **Trust relationships** tab → show `glue.amazonaws.com` trust
 5. Click **Permissions** tab → show inline policy + managed policy attachment
 6. Click the inline policy → **JSON** → walk through the S3 ARNs

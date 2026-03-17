@@ -43,11 +43,20 @@ Expected output:
 {
     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
     "Account": "<ACCOUNT_ID>",
-    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/trainee01"
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX"
 }
 ```
 
-> Replace `trainee01` with your actual attendee ID throughout this lab.
+> Replace `trainee01` with your actual attendee ID throughout this lab (set `PREFIX` in the block above).
+
+Set your prefix once — all commands below use `$PREFIX` and `$BATCH`:
+
+```bash
+export PREFIX=traineeNN   # ← replace traineeNN with your ID, e.g. trainee07
+export BATCH=2026-03
+export AWS_PROFILE=aws-de-lab
+export REGION=ap-south-1
+```
 
 ---
 
@@ -56,24 +65,24 @@ Expected output:
 ### 1.1 Navigate to IAM Roles
 
 1. Open the AWS Console → search bar → `IAM` → **Roles**
-2. In the search box, type your attendee prefix (e.g. `trainee01`)
+2. In the search box, type your attendee prefix (e.g. `$PREFIX`)
 
 You should see **6 roles**:
 
 | Role Name | Purpose |
 |---|---|
-| `trainee01-2026-03-glue-service-role` | Glue crawlers and ETL jobs |
-| `trainee01-2026-03-emr-service-role` | EMR cluster management |
-| `trainee01-2026-03-emr-ec2-role` | EMR EC2 worker nodes |
-| `trainee01-2026-03-redshift-s3-role` | Redshift COPY and Spectrum |
-| `trainee01-2026-03-lakeformation-role` | Lake Formation service |
-| `trainee01-2026-03-firehose-role` | Amazon Data Firehose delivery |
+| `$PREFIX-$BATCH-glue-service-role` | Glue crawlers and ETL jobs |
+| `$PREFIX-$BATCH-emr-service-role` | EMR cluster management |
+| `$PREFIX-$BATCH-emr-ec2-role` | EMR EC2 worker nodes |
+| `$PREFIX-$BATCH-redshift-s3-role` | Redshift COPY and Spectrum |
+| `$PREFIX-$BATCH-lakeformation-role` | Lake Formation service |
+| `$PREFIX-$BATCH-firehose-role` | Amazon Data Firehose delivery |
 
 > If you see **0 roles**, let the instructor know — the role provisioning step has not been completed yet.
 
 ### 1.2 Deep-dive: Glue Service Role
 
-1. Click `trainee01-2026-03-glue-service-role`
+1. Click `$PREFIX-$BATCH-glue-service-role`
 2. Go to the **Trust relationships** tab
 
 **Question 1:** What principal is listed as trusted? What does this mean?
@@ -115,7 +124,7 @@ They contain `placeholder-bucket-not-yet-created`. This is a safe fallback value
 <details>
 <summary>Answer</summary>
 
-`arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-glue-service-role` — the role's own ARN. This allows the role to "pass itself" to Glue jobs. Without this, even a valid AWS principal with IAM permissions would get `AccessDenied` when trying to create a Glue job referencing this role.
+`arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-glue-service-role` — the role's own ARN. This allows the role to "pass itself" to Glue jobs. Without this, even a valid AWS principal with IAM permissions would get `AccessDenied` when trying to create a Glue job referencing this role.
 
 </details>
 
@@ -123,11 +132,11 @@ They contain `placeholder-bucket-not-yet-created`. This is a safe fallback value
 
 ### 1.3 Deep-dive: EMR Roles
 
-1. Click `trainee01-2026-03-emr-service-role`
+1. Click `$PREFIX-$BATCH-emr-service-role`
 2. Note the trust: `elasticmapreduce.amazonaws.com`
 3. Navigate to **Instance profiles** (left sidebar in IAM)
-4. Search for `trainee01` — find `trainee01-2026-03-emr-instance-profile`
-5. Click it — note it wraps `trainee01-2026-03-emr-ec2-role`
+4. Search for `$PREFIX` — find `$PREFIX-$BATCH-emr-instance-profile`
+5. Click it — note it wraps `$PREFIX-$BATCH-emr-ec2-role`
 
 **Question 4:** Why does EMR need two separate IAM identities (a service role AND an EC2 instance profile)?
 
@@ -146,7 +155,7 @@ They have different trust principals and different permission sets. Pre-deprecat
 
 ### 1.4 Inspect the Redshift Role
 
-1. Click `trainee01-2026-03-redshift-s3-role`
+1. Click `$PREFIX-$BATCH-redshift-s3-role`
 2. Open the inline policy JSON
 3. Find the `RedshiftSpectrum` statement
 
@@ -168,7 +177,7 @@ In your terminal (with `AWS_PROFILE=aws-de-lab` set):
 ### 2.1 List your roles
 
 ```bash
-aws iam list-roles --query "Roles[?contains(RoleName, 'trainee01')].[RoleName, Arn]" --output table
+aws iam list-roles --query "Roles[?contains(RoleName, '$PREFIX')].[RoleName, Arn]" --output table
 ```
 
 Expected output:
@@ -176,19 +185,19 @@ Expected output:
 --------------------------------------------------------------------------------------------------------------
 |                                               ListRoles                                                    |
 +-------------------------------------------+-----------------------------------------------------------------+
-|  trainee01-2026-03-emr-ec2-role           |  arn:aws:iam::<ACCOUNT_ID>:role/trainee01-2026-03-emr-ec2-role  |
-|  trainee01-2026-03-emr-service-role       |  ...                                                            |
-|  trainee01-2026-03-firehose-role          |  ...                                                            |
-|  trainee01-2026-03-glue-service-role      |  ...                                                            |
-|  trainee01-2026-03-lakeformation-role     |  ...                                                            |
-|  trainee01-2026-03-redshift-s3-role       |  ...                                                            |
+|  $PREFIX-$BATCH-emr-ec2-role           |  arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-emr-ec2-role  |
+|  $PREFIX-$BATCH-emr-service-role       |  ...                                                            |
+|  $PREFIX-$BATCH-firehose-role          |  ...                                                            |
+|  $PREFIX-$BATCH-glue-service-role      |  ...                                                            |
+|  $PREFIX-$BATCH-lakeformation-role     |  ...                                                            |
+|  $PREFIX-$BATCH-redshift-s3-role       |  ...                                                            |
 +-------------------------------------------+-----------------------------------------------------------------+
 ```
 
 ### 2.2 Get a specific role
 
 ```bash
-aws iam get-role --role-name trainee01-2026-03-glue-service-role
+aws iam get-role --role-name $PREFIX-$BATCH-glue-service-role
 ```
 
 Examine the `AssumeRolePolicyDocument` field — this is the trust policy.
@@ -196,14 +205,14 @@ Examine the `AssumeRolePolicyDocument` field — this is the trust policy.
 ### 2.3 List inline policies on a role
 
 ```bash
-aws iam list-role-policies --role-name trainee01-2026-03-glue-service-role
+aws iam list-role-policies --role-name $PREFIX-$BATCH-glue-service-role
 ```
 
 ### 2.4 Read an inline policy document
 
 ```bash
 aws iam get-role-policy \
-  --role-name trainee01-2026-03-glue-service-role \
+  --role-name $PREFIX-$BATCH-glue-service-role \
   --policy-name glue-inline-policy
 ```
 
@@ -217,7 +226,7 @@ This returns the permission policy JSON. Count the `Statement` array entries —
 ### 2.5 List managed policy attachments
 
 ```bash
-aws iam list-attached-role-policies --role-name trainee01-2026-03-glue-service-role
+aws iam list-attached-role-policies --role-name $PREFIX-$BATCH-glue-service-role
 ```
 
 ---
@@ -230,7 +239,7 @@ Test the principle of least privilege by verifying what you can and cannot do.
 
 ```bash
 # List S3 buckets with your prefix (empty today — storage provisioned Day 16)
-aws s3 ls | grep trainee01
+aws s3 ls | grep $PREFIX
 
 # Get your own caller identity
 aws sts get-caller-identity
@@ -239,7 +248,7 @@ aws sts get-caller-identity
 aws kinesis list-streams
 
 # Describe Redshift clusters
-aws redshift describe-clusters --query 'Clusters[?contains(ClusterIdentifier, `trainee01`)]'
+aws redshift describe-clusters --query "Clusters[?contains(ClusterIdentifier, \`$PREFIX\`)]"
 ```
 
 ### 3.2 Things you CANNOT do (expected failures — educational)
@@ -256,7 +265,7 @@ aws iam create-role \
 Expected error:
 ```
 An error occurred (AccessDenied) when calling the CreateRole operation: 
-User: arn:aws:iam::<ACCOUNT_ID>:user/trainee01 is not authorized to perform: 
+User: arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX is not authorized to perform: 
 iam:CreateRole because no identity-based policy allows the iam:CreateRole action
 ```
 
@@ -287,16 +296,16 @@ Work through this policy evaluation exercise mentally:
 
 ### Scenario
 
-You are `trainee01`. You run:
+You are `$PREFIX`. You run:
 
 ```bash
-aws s3 ls s3://trainee01-2026-03-raw/
+aws s3 ls s3://$PREFIX-$BATCH-raw/
 ```
 
 **Policy evaluation steps (answer each):**
 
-1. Is there an explicit **Deny** matching `s3:ListBucket` on `trainee01-2026-03-raw`? → `DenyIAMWriteOrgAccount` only denies IAM actions, so: **No**
-2. Is there an explicit **Allow**? → Check `S3OwnBuckets` statement: `"arn:aws:s3:::trainee01-*"` matches → **Yes**
+1. Is there an explicit **Deny** matching `s3:ListBucket` on `$PREFIX-$BATCH-raw`? → `DenyIAMWriteOrgAccount` only denies IAM actions, so: **No**
+2. Is there an explicit **Allow**? → Check `S3OwnBuckets` statement: `"arn:aws:s3:::$PREFIX-*"` matches → **Yes**
 3. Result: **Allow**
 
 Now try:
@@ -306,7 +315,7 @@ aws s3 ls s3://trainee02-2026-03-raw/
 ```
 
 1. Explicit Deny? No IAM deny covers S3 on other-attendee buckets directly
-2. Explicit Allow? `S3OwnBuckets` is `trainee01-*` — `trainee02-2026-03-raw` does **not** match
+2. Explicit Allow? `S3OwnBuckets` is `$PREFIX-*` — `trainee02-2026-03-raw` does **not** match
 3. Result: **Implicit Deny** (no Allow → default deny)
 
 **Question 7:** What is the difference between an **explicit deny** and an **implicit deny** in IAM?
@@ -324,9 +333,9 @@ aws s3 ls s3://trainee02-2026-03-raw/
 ## Part 5: Console Verification — Instance Profiles
 
 1. In IAM console → **Instance profiles** (left sidebar, scroll down under "Access management")
-2. Search `trainee01`
-3. Click `trainee01-2026-03-emr-instance-profile`
-4. Note the **Role** listed — should be `trainee01-2026-03-emr-ec2-role`
+2. Search `$PREFIX`
+3. Click `$PREFIX-$BATCH-emr-instance-profile`
+4. Note the **Role** listed — should be `$PREFIX-$BATCH-emr-ec2-role`
 
 **Why the instance profile wrapper?**  
 EC2 instances cannot directly assume IAM roles. Amazon EC2 uses the **instance profile** as the mechanism to inject role credentials into an EC2 instance's metadata endpoint (`http://169.254.169.254/latest/meta-data/iam/security-credentials/`). EMR worker nodes retrieve their S3/CloudWatch credentials from this endpoint automatically.

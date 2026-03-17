@@ -16,7 +16,7 @@
 > export AWS_PROFILE=aws-de-lab
 > aws sts get-caller-identity
 > ```
-> If this returns your `traineeNN` ARN, skip to Part 1. If not, re-run `aws configure` below.
+> If this returns your `$PREFIX` ARN, skip to Part 1. If not, re-run `aws configure` below.
 
 In your workstation terminal (or local terminal):
 
@@ -46,11 +46,20 @@ Expected output:
 {
     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
     "Account": "<ACCOUNT_ID>",
-    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/traineeNN"
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX"
 }
 ```
 
 > Replace `traineeNN` with your actual attendee ID throughout this lab.
+
+Set your prefix once — all commands below use `$PREFIX` and `$BATCH`:
+
+```bash
+export PREFIX=traineeNN   # ← replace traineeNN with your ID, e.g. trainee07
+export BATCH=2026-03
+export AWS_PROFILE=aws-de-lab
+export REGION=ap-south-1
+```
 
 ---
 
@@ -58,10 +67,8 @@ Expected output:
 
 In this lab you will connect to your pre-provisioned Amazon RDS PostgreSQL instance, create a database schema, load the NYC taxi dataset, explore the query interface, and verify monitoring and backup configuration. You will use both the AWS Console and the `psql` CLI.
 
-> **Your RDS instance name:** `traineeNN-2026-03-postgres`  
+> **Your RDS instance name:** `$PREFIX-$BATCH-postgres`  
 > Replace `traineeNN` with your actual attendee ID (e.g. `trainee05`).
-
----
 
 ## Part 1: Retrieve Your Database Credentials
 
@@ -70,14 +77,14 @@ Your password is stored in AWS Secrets Manager — never hardcoded.
 ### 1.1 Retrieve via AWS Console
 
 1. Console → search `Secrets Manager` → **Secrets**
-2. Find the secret named `aws-de-lab/2026-03/traineeNN/rds`
+2. Find the secret named `aws-de-lab/$BATCH/$PREFIX/rds`
 3. Click it → **Retrieve secret value**
 4. Note the JSON structure:
 
 ```json
 {
   "engine":   "postgres",
-  "host":     "traineeNN-2026-03-postgres.xxxxxxxxx.ap-south-1.rds.amazonaws.com",
+  "host":     "$PREFIX-$BATCH-postgres.xxxxxxxxx.ap-south-1.rds.amazonaws.com",
   "port":     5432,
   "dbname":   "labdb",
   "username": "labadmin",
@@ -92,13 +99,13 @@ export AWS_PROFILE=aws-de-lab
 
 # Get the full secret JSON
 aws secretsmanager get-secret-value \
-  --secret-id "aws-de-lab/2026-03/traineeNN/rds" \
+  --secret-id "aws-de-lab/$BATCH/$PREFIX/rds" \
   --query SecretString \
   --output text
 
 # Extract just the host (useful for scripting)
 aws secretsmanager get-secret-value \
-  --secret-id "aws-de-lab/2026-03/traineeNN/rds" \
+  --secret-id "aws-de-lab/$BATCH/$PREFIX/rds" \
   --query SecretString \
   --output text | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['host'])"
 ```
@@ -112,7 +119,7 @@ Save your host, username, and password — you will need them for every exercise
 ### 2.1 Instance overview
 
 1. Console → search `RDS` → **Databases**
-2. Click `traineeNN-2026-03-postgres`
+2. Click `$PREFIX-$BATCH-postgres`
 3. Examine the **Summary** tab:
 
 | Field | Value to verify |
@@ -128,7 +135,7 @@ Save your host, username, and password — you will need them for every exercise
 
 1. Click the **Configuration** tab
 2. Note:
-   - **DB parameter group:** `traineeNN-2026-03-rds-pg` — custom group with slow query logging
+   - **DB parameter group:** `$PREFIX-$BATCH-rds-pg` — custom group with slow query logging
    - **Backup retention period:** 1 day
    - **Backup window:** 03:00–04:00 UTC
    - **Deletion protection:** Disabled (lab)
@@ -168,11 +175,11 @@ psql --version  # Should show psql (PostgreSQL) 15.x or similar
 ```bash
 # Retrieve credentials
 export PGHOST=$(aws secretsmanager get-secret-value \
-  --secret-id "aws-de-lab/2026-03/traineeNN/rds" \
+  --secret-id "aws-de-lab/$BATCH/$PREFIX/rds" \
   --query SecretString --output text | python3 -c "import json,sys; print(json.load(sys.stdin)['host'])")
 
 export PGPASSWORD=$(aws secretsmanager get-secret-value \
-  --secret-id "aws-de-lab/2026-03/traineeNN/rds" \
+  --secret-id "aws-de-lab/$BATCH/$PREFIX/rds" \
   --query SecretString --output text | python3 -c "import json,sys; print(json.load(sys.stdin)['password'])")
 
 export PGUSER=labadmin
@@ -389,7 +396,7 @@ After running this, close your session (`\q`) and reconnect. The connection/disc
 ### 6.3 Check parameter group in the Console
 
 1. RDS Console → **Parameter groups** (left sidebar)
-2. Click `traineeNN-2026-03-rds-pg`
+2. Click `$PREFIX-$BATCH-rds-pg`
 3. Filter parameters by `log` — confirm your 4 parameters are set
 
 ---
@@ -398,7 +405,7 @@ After running this, close your session (`\q`) and reconnect. The connection/disc
 
 ### 7.1 View automated backup in the Console
 
-1. RDS Console → **Databases** → `traineeNN-2026-03-postgres`
+1. RDS Console → **Databases** → `$PREFIX-$BATCH-postgres`
 2. Click **Maintenance and backups** tab
 3. Scroll to **Automated backups** — note the latest snapshot timestamp
 
@@ -409,12 +416,12 @@ export AWS_PROFILE=aws-de-lab
 
 # Create a manual snapshot (takes 3–10 minutes)
 aws rds create-db-snapshot \
-  --db-instance-identifier traineeNN-2026-03-postgres \
-  --db-snapshot-identifier traineeNN-2026-03-manual-snap-day17
+  --db-instance-identifier $PREFIX-$BATCH-postgres \
+  --db-snapshot-identifier $PREFIX-$BATCH-manual-snap-day17
 
 # Monitor snapshot status
 aws rds describe-db-snapshots \
-  --db-snapshot-identifier traineeNN-2026-03-manual-snap-day17 \
+  --db-snapshot-identifier $PREFIX-$BATCH-manual-snap-day17 \
   --query 'DBSnapshots[0].{Status:Status,Progress:PercentProgress,AllocatedStorage:AllocatedStorage}' \
   --output table
 ```
@@ -425,7 +432,7 @@ aws rds describe-db-snapshots \
 
 ```bash
 aws rds describe-db-snapshots \
-  --db-instance-identifier traineeNN-2026-03-postgres \
+  --db-instance-identifier $PREFIX-$BATCH-postgres \
   --query 'DBSnapshots[*].{Identifier:DBSnapshotIdentifier,Status:Status,Type:SnapshotType,Created:SnapshotCreateTime}' \
   --output table
 ```
@@ -436,7 +443,7 @@ aws rds describe-db-snapshots \
 
 ### 8.1 View metrics in the Console
 
-1. RDS Console → `traineeNN-2026-03-postgres` → **Monitoring** tab
+1. RDS Console → `$PREFIX-$BATCH-postgres` → **Monitoring** tab
 2. After your queries from Part 4, look for:
    - **DatabaseConnections** — should have spiked when you connected
    - **WriteIOPS / ReadIOPS** — visible after INSERTs and SELECTs
@@ -449,7 +456,7 @@ aws rds describe-db-snapshots \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/RDS \
   --metric-name DatabaseConnections \
-  --dimensions Name=DBInstanceIdentifier,Value=traineeNN-2026-03-postgres \
+  --dimensions Name=DBInstanceIdentifier,Value=$PREFIX-$BATCH-postgres \
   --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \

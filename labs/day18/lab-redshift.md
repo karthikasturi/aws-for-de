@@ -16,7 +16,7 @@
 > export AWS_PROFILE=aws-de-lab
 > aws sts get-caller-identity
 > ```
-> If this returns your `traineeNN` ARN, skip to Part 1. If not, re-run `aws configure` below.
+> If this returns your `$PREFIX` ARN, skip to Part 1. If not, re-run `aws configure` below.
 
 In your workstation terminal (or local terminal):
 
@@ -46,11 +46,21 @@ Expected output:
 {
     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
     "Account": "<ACCOUNT_ID>",
-    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/traineeNN"
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX"
 }
 ```
 
 > Replace `traineeNN` with your actual attendee ID throughout this lab.
+
+Set your prefix once — all commands below use `$PREFIX` and `$BATCH`:
+
+```bash
+export PREFIX=traineeNN   # ← replace traineeNN with your ID, e.g. trainee07
+export BATCH=2026-03
+export CATALOG="${PREFIX}_${BATCH//-/_}_catalog"   # Glue catalog DB name
+export AWS_PROFILE=aws-de-lab
+export REGION=ap-south-1
+```
 
 ---
 
@@ -82,13 +92,13 @@ Your Redshift cluster credentials are stored in AWS Secrets Manager, separate fr
 ### Retrieve via console
 
 1. Open **AWS Console** → **Secrets Manager**
-2. Search for: `aws-de-lab/2026-03/traineeNN/redshift`
+2. Search for: `aws-de-lab/$BATCH/$PREFIX/redshift`
 3. Click the secret → **Retrieve secret value**
 4. Note the values:
 
 | Field | Your value |
 |---|---|
-| `host` | `traineeNN-2026-03-redshift.xxxxxxxxx.ap-south-1.redshift.amazonaws.com` |
+| `host` | `$PREFIX-$BATCH-redshift.xxxxxxxxx.ap-south-1.redshift.amazonaws.com` |
 | `port` | `5439` |
 | `dbname` | `labdb` |
 | `username` | `labadmin` |
@@ -98,7 +108,7 @@ Your Redshift cluster credentials are stored in AWS Secrets Manager, separate fr
 
 ```bash
 SECRET=$(aws secretsmanager get-secret-value \
-  --secret-id "aws-de-lab/2026-03/traineeNN/redshift" \
+  --secret-id "aws-de-lab/$BATCH/$PREFIX/redshift" \
   --query SecretString --output text)
 
 export REDSHIFT_HOST=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['host'])")
@@ -112,7 +122,7 @@ export PGPASSWORD=$(echo $SECRET | python3 -c "import sys,json; print(json.load(
 
 ```bash
 aws redshift describe-clusters \
-  --cluster-identifier traineeNN-2026-03-redshift \
+  --cluster-identifier $PREFIX-$BATCH-redshift \
   --query 'Clusters[0].{Status:ClusterStatus,NodeType:NodeType,NumberOfNodes:NumberOfNodes,DBName:DBName,Endpoint:Endpoint}'
 ```
 
@@ -124,7 +134,7 @@ Expected output:
     "NumberOfNodes": 1,
     "DBName": "labdb",
     "Endpoint": {
-        "Address": "traineeNN-2026-03-redshift.xxxx.ap-south-1.redshift.amazonaws.com",
+        "Address": "$PREFIX-$BATCH-redshift.xxxx.ap-south-1.redshift.amazonaws.com",
         "Port": 5439
     }
 }
@@ -138,7 +148,7 @@ Query Editor v2 is the browser-based SQL editor for Redshift — no local client
 
 > **Why QEv2 and psql use different users**  
 > Query Editor v2 authenticates via **IAM** (`GetClusterCredentialsWithIAM`), which creates a
-> separate Redshift database user named `IAMR:traineeNN`. Your psql sessions connect
+> separate Redshift database user named `IAMR:$PREFIX`. Your psql sessions connect
 > as `labadmin` (the master user). These are two different DB users.
 >
 > The lab cluster's `init.sql` grants `PUBLIC` access to both `trainee_schema` and `public`,
@@ -152,7 +162,7 @@ Query Editor v2 is the browser-based SQL editor for Redshift — no local client
 2. Left sidebar → **Query Editor v2**
 3. Click **+** (Connect to database)
 4. Connection settings:
-   - **Cluster:** `traineeNN-2026-03-redshift`
+   - **Cluster:** `$PREFIX-$BATCH-redshift`
    - **Database:** `labdb`
    - **Authentication:** `Temporary credentials` (uses your IAM identity)
 5. Click **Create connection**
@@ -278,12 +288,12 @@ The `COPY` command is Redshift's primary bulk-load mechanism. It loads data in p
 ```bash
 # Your Redshift cluster has an attached IAM role for S3 access
 aws redshift describe-clusters \
-  --cluster-identifier traineeNN-2026-03-redshift \
+  --cluster-identifier $PREFIX-$BATCH-redshift \
   --query 'Clusters[0].IamRoles[*].IamRoleArn'
 ```
 
 Make note of the ARN — it will look like:  
-`arn:aws:iam::<ACCOUNT_ID>:role/traineeNN-2026-03-redshift-s3-role`
+`arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-redshift-s3-role`
 
 ### Load CSV data
 
@@ -291,8 +301,8 @@ In psql or Query Editor v2, run (replace `<ACCOUNT_ID>` and `NN`):
 
 ```sql
 COPY taxi_trips
-FROM 's3://traineeNN-2026-03-raw/datasets/taxi_trips_sample.csv'
-IAM_ROLE 'arn:aws:iam::<ACCOUNT_ID>:role/traineeNN-2026-03-redshift-s3-role'
+FROM 's3://$PREFIX-$BATCH-raw/datasets/taxi_trips_sample.csv'
+IAM_ROLE 'arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-redshift-s3-role'
 CSV
 IGNOREHEADER 1
 DATEFORMAT 'auto'
@@ -449,12 +459,12 @@ Redshift Spectrum lets you query data in S3 **without loading it** into Redshift
 -- Replace <ACCOUNT_ID> and NN
 CREATE EXTERNAL SCHEMA IF NOT EXISTS spectrum_raw
 FROM DATA CATALOG
-DATABASE 'traineeNN_2026-03_catalog'
-IAM_ROLE 'arn:aws:iam::<ACCOUNT_ID>:role/traineeNN-2026-03-redshift-s3-role'
+DATABASE '$CATALOG'
+IAM_ROLE 'arn:aws:iam::<ACCOUNT_ID>:role/$PREFIX-$BATCH-redshift-s3-role'
 REGION 'ap-south-1';
 ```
 
-> **Note:** The Glue catalog database uses underscores: `traineeNN_2026-03_catalog`  
+> **Note:** The Glue catalog database uses underscores: `$CATALOG`  
 > (Glue catalog database names cannot contain hyphens)
 
 ### Query S3 through Spectrum

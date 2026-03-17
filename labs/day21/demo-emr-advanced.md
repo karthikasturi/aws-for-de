@@ -242,7 +242,7 @@ S3 / Glue Catalog
 # This runs on the EMR cluster, not locally
 from pyspark.sql import functions as F
 
-df = spark.read.parquet("s3://trainee01-2026-03-transformed/taxi_parquet/")
+df = spark.read.parquet("s3://$PREFIX-$BATCH-transformed/taxi_parquet/")
 df.groupBy("pickup_year", "pickup_month").count().show()
 ```
 

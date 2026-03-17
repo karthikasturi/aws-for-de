@@ -11,10 +11,13 @@
 
 ```bash
 export AWS_PROFILE=aws-de-lab
+export PREFIX=trainee01   # change if demonstrating a different attendee
+export BATCH=2026-03
+export CATALOG="${PREFIX}_${BATCH//-/_}_catalog"   # e.g. trainee01_2026_03_catalog
 aws sts get-caller-identity   # Must return Account: "<ACCOUNT_ID>"
 ```
 
-Use `trainee01` resources for the live demo. Console: **AWS Lake Formation**.
+Use `$PREFIX` resources for the live demo. Console: **AWS Lake Formation**.
 
 ---
 
@@ -68,8 +71,8 @@ aws lakeformation list-resources \
 ```
 
 In this lab, two locations are registered:
-- `s3://trainee01-2026-03-raw/` — raw CSV landing zone
-- `s3://trainee01-2026-03-transformed/` — Parquet output
+- `s3://$PREFIX-$BATCH-raw/` — raw CSV landing zone
+- `s3://$PREFIX-$BATCH-transformed/` — Parquet output
 
 ### Lake Formation administrators
 
@@ -90,7 +93,7 @@ Expected:
 aws lakeformation list-permissions \
   --resource '{
     "Table": {
-      "DatabaseName": "trainee01_2026_03_catalog",
+      "DatabaseName": "'$CATALOG'",
       "Name": "taxi_trips_parquet"
     }
   }' \
@@ -111,7 +114,7 @@ In the Terraform lab configuration, a `data_cells_filter` named `no_location_dat
 # Note: create_column_filter = false by default — apply on-the-fly for the demo (see CLI step below)
 resource "aws_lakeformation_data_cells_filter" "location_filter" {
   table_data {
-    database_name    = "trainee01_2026_03_catalog"
+    database_name    = "$CATALOG"
     table_name       = "taxi"   # raw CSV table created by the Glue crawler
     name             = "no_location_data"
     column_names     = ["vendor_id", "pickup_datetime", "dropoff_datetime",
@@ -139,7 +142,7 @@ The filter is defined in Terraform (`create_column_filter = false` by default, s
 aws lakeformation create-data-cells-filter \
   --table-data '{
     "TableCatalogId": "985539779502",
-    "DatabaseName": "trainee01_2026_03_catalog",
+    "DatabaseName": "$CATALOG",
     "TableName": "taxi",
     "Name": "no_location_data",
     "RowFilter": { "AllRowsWildcard": {} },
@@ -149,7 +152,7 @@ aws lakeformation create-data-cells-filter \
 
 Then browse to it in the console:
 1. Console → **Lake Formation** → **Data catalog** → **Tables**
-2. Find `taxi` in `trainee01_2026_03_catalog`
+2. Find `taxi` in `$CATALOG`
 3. Click **Data filters** tab
 4. Show `no_location_data` filter:
    - **Row filter expression:** (none — all rows)
@@ -165,7 +168,7 @@ aws lakeformation grant-permissions \
   --resource '{
     "DataCellsFilter": {
       "TableCatalogId": "985539779502",
-      "DatabaseName": "trainee01_2026_03_catalog",
+      "DatabaseName": "$CATALOG",
       "TableName": "taxi",
       "Name": "no_location_data"
     }
@@ -177,7 +180,7 @@ aws lakeformation grant-permissions \
 # Instructor cleanup: delete the filter after Part 3
 aws lakeformation delete-data-cells-filter \
   --table-catalog-id 985539779502 \
-  --database-name trainee01_2026_03_catalog \
+  --database-name $CATALOG \
   --table-name taxi \
   --name no_location_data --region ap-south-1
 ```
@@ -205,11 +208,11 @@ A business rule: the `finance` team can only query `Credit` payment records.
 4. Show the preview pane (does not run against data, just validates syntax)
 
 ```bash
-# Create via CLI (demo — run for trainee01 only)
+# Create via CLI (demo — run for $PREFIX only)
 aws lakeformation create-data-cells-filter \
   --table-data '{
     "TableCatalogId": "985539779502",
-    "DatabaseName": "trainee01_2026_03_catalog",
+    "DatabaseName": "'$CATALOG'",
     "TableName": "taxi_trips_parquet",
     "Name": "credit_payments_only",
     "RowFilter": {
@@ -223,7 +226,7 @@ aws lakeformation create-data-cells-filter \
 # Clean up after demo
 aws lakeformation delete-data-cells-filter \
   --table-catalog-id 985539779502 \
-  --database-name trainee01_2026_03_catalog \
+  --database-name $CATALOG \
   --table-name taxi_trips_parquet \
   --name credit_payments_only --region ap-south-1
 ```

@@ -16,7 +16,7 @@
 > export AWS_PROFILE=aws-de-lab
 > aws sts get-caller-identity
 > ```
-> If this returns your `traineeNN` ARN, skip to Part 1. If not, re-run `aws configure` below.
+> If this returns your `$PREFIX` ARN, skip to Part 1. If not, re-run `aws configure` below.
 
 In your workstation terminal (or local terminal):
 
@@ -46,11 +46,21 @@ Expected output:
 {
     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
     "Account": "<ACCOUNT_ID>",
-    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/traineeNN"
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX"
 }
 ```
 
 > Replace `traineeNN` with your actual attendee ID throughout this lab.
+
+Set your prefix once — all commands below use `$PREFIX` and `$BATCH`:
+
+```bash
+export PREFIX=traineeNN   # ← replace traineeNN with your ID, e.g. trainee07
+export BATCH=2026-03
+export CATALOG="${PREFIX}_${BATCH//-/_}_catalog"   # Glue catalog DB name
+export AWS_PROFILE=aws-de-lab
+export REGION=ap-south-1
+```
 
 ---
 
@@ -99,7 +109,7 @@ Producer Script                  Kinesis            Firehose              S3
 ```bash
 # View stream details
 aws kinesis describe-stream-summary \
-  --stream-name traineeNN-2026-03-stream \
+  --stream-name $PREFIX-$BATCH-stream \
   --query 'StreamDescriptionSummary.{Status:StreamStatus,ShardCount:OpenShardCount,RetentionHours:RetentionPeriodHours,Encryption:EncryptionType}'
 ```
 
@@ -116,7 +126,7 @@ Expected output:
 ```bash
 # View shard details (partition key range)
 aws kinesis list-shards \
-  --stream-name traineeNN-2026-03-stream \
+  --stream-name $PREFIX-$BATCH-stream \
   --query 'Shards[*].{ShardId:ShardId,StartHash:HashKeyRange.StartingHashKey,EndHash:HashKeyRange.EndingHashKey}'
 ```
 
@@ -128,19 +138,19 @@ aws kinesis list-shards \
 
 ```bash
 aws firehose describe-delivery-stream \
-  --delivery-stream-name traineeNN-2026-03-firehose \
+  --delivery-stream-name $PREFIX-$BATCH-firehose \
   --query 'DeliveryStreamDescription.{Status:DeliveryStreamStatus,Source:Source,Destination:Destinations[0].ExtendedS3DestinationDescription.{Bucket:BucketARN,Prefix:Prefix,BufferingHints:BufferingHints,DataFormatConversionConfiguration:DataFormatConversionConfiguration.Enabled}}'
 ```
 
 Key settings to note:
 - **BufferingHints.IntervalInSeconds: 60** — Firehose waits 60 seconds (or 64 MB, whichever comes first) before writing to S3
 - **DataFormatConversionConfiguration: enabled** — converts JSON → Parquet using the Glue schema
-- **BucketARN:** points to `traineeNN-2026-03-firehose-landing`
+- **BucketARN:** points to `$PREFIX-$BATCH-firehose-landing`
 
 ```bash
 # Check the Glue table Firehose uses for schema reference
 aws firehose describe-delivery-stream \
-  --delivery-stream-name traineeNN-2026-03-firehose \
+  --delivery-stream-name $PREFIX-$BATCH-firehose \
   --query 'DeliveryStreamDescription.Destinations[0].ExtendedS3DestinationDescription.DataFormatConversionConfiguration.SchemaConfiguration'
 ```
 
@@ -153,7 +163,7 @@ aws firehose describe-delivery-stream \
 ```bash
 # Download the producer script from S3
 aws s3 cp \
-  s3://traineeNN-2026-03-scripts/kinesis/kinesis_producer.py \
+  s3://$PREFIX-$BATCH-scripts/kinesis/kinesis_producer.py \
   ~/kinesis_producer.py
 
 # Inspect it
@@ -172,7 +182,7 @@ The script generates synthetic events with these fields:
 
 ```bash
 python3 ~/kinesis_producer.py \
-  --stream traineeNN-2026-03-stream \
+  --stream $PREFIX-$BATCH-stream \
   --count 20 \
   --region ap-south-1 \
   --delay 0.1
@@ -180,7 +190,7 @@ python3 ~/kinesis_producer.py \
 
 You should see output like:
 ```
-Sending 20 events to stream: traineeNN-2026-03-stream
+Sending 20 events to stream: $PREFIX-$BATCH-stream
   [   1/20] 2024-01-15T10:23:45.123456+00:00  fare=$23.40
   [   2/20] 2024-01-15T10:23:45.234567+00:00  fare=$12.80
   ...
@@ -191,7 +201,7 @@ Sending 20 events to stream: traineeNN-2026-03-stream
 ```bash
 # Send 200 events with 0.5 second spacing (~100 seconds total)
 python3 ~/kinesis_producer.py \
-  --stream traineeNN-2026-03-stream \
+  --stream $PREFIX-$BATCH-stream \
   --count 200 \
   --region ap-south-1 \
   --delay 0.5
@@ -212,7 +222,7 @@ While the producer is running (or just after), check the stream metrics:
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name IncomingRecords \
-  --dimensions Name=StreamName,Value=traineeNN-2026-03-stream \
+  --dimensions Name=StreamName,Value=$PREFIX-$BATCH-stream \
   --start-time $(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -226,7 +236,7 @@ aws cloudwatch get-metric-statistics \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name IncomingBytes \
-  --dimensions Name=StreamName,Value=traineeNN-2026-03-stream \
+  --dimensions Name=StreamName,Value=$PREFIX-$BATCH-stream \
   --start-time $(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -238,7 +248,7 @@ aws cloudwatch get-metric-statistics \
 ### Monitor in console
 
 1. Open **AWS Console** → **Amazon Kinesis** → **Data streams**
-2. Click `traineeNN-2026-03-stream`
+2. Click `$PREFIX-$BATCH-stream`
 3. **Monitoring** tab → observe:
    - **Put records — success**: real-time count of records written
    - **Incoming data — bytes**: bytes per second
@@ -253,13 +263,13 @@ You can manually read records from the stream using the Kinesis GetShardIterator
 ```bash
 # Step 1: Get the shard ID
 SHARD_ID=$(aws kinesis list-shards \
-  --stream-name traineeNN-2026-03-stream \
+  --stream-name $PREFIX-$BATCH-stream \
   --query 'Shards[0].ShardId' --output text)
 echo "Shard: $SHARD_ID"
 
 # Step 2: Get a shard iterator (TRIM_HORIZON = from oldest record in retention window)
 ITERATOR=$(aws kinesis get-shard-iterator \
-  --stream-name traineeNN-2026-03-stream \
+  --stream-name $PREFIX-$BATCH-stream \
   --shard-id $SHARD_ID \
   --shard-iterator-type TRIM_HORIZON \
   --query 'ShardIterator' --output text)
@@ -306,15 +316,15 @@ sleep 90
 
 ```bash
 # List all files in the Firehose landing bucket
-aws s3 ls s3://traineeNN-2026-03-firehose-landing/taxi/ --recursive
+aws s3 ls s3://$PREFIX-$BATCH-firehose-landing/taxi/ --recursive
 
 # Expected structure (Hive-partitioned):
-# taxi/year=YYYY/month=MM/day=DD/traineeNN-2026-03-firehose-1-YYYY-MM-DD-HH-MM-SS-xxxx.parquet
+# taxi/year=YYYY/month=MM/day=DD/$PREFIX-$BATCH-firehose-1-YYYY-MM-DD-HH-MM-SS-xxxx.parquet
 ```
 
 ```bash
 # Count files
-aws s3 ls s3://traineeNN-2026-03-firehose-landing/taxi/ --recursive | wc -l
+aws s3 ls s3://$PREFIX-$BATCH-firehose-landing/taxi/ --recursive | wc -l
 ```
 
 ### Check Firehose delivery metrics
@@ -324,7 +334,7 @@ aws s3 ls s3://traineeNN-2026-03-firehose-landing/taxi/ --recursive | wc -l
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Firehose \
   --metric-name DeliveryToS3.Records \
-  --dimensions Name=DeliveryStreamName,Value=traineeNN-2026-03-firehose \
+  --dimensions Name=DeliveryStreamName,Value=$PREFIX-$BATCH-firehose \
   --start-time $(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -338,7 +348,7 @@ aws cloudwatch get-metric-statistics \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Firehose \
   --metric-name DeliveryToS3.DataFreshness \
-  --dimensions Name=DeliveryStreamName,Value=traineeNN-2026-03-firehose \
+  --dimensions Name=DeliveryStreamName,Value=$PREFIX-$BATCH-firehose \
   --start-time $(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 300 \
@@ -354,15 +364,15 @@ aws cloudwatch get-metric-statistics \
 If the Glue catalog is correctly set up (from Day 19), Athena can query the Parquet files that Firehose wrote.
 
 ```sql
--- In Athena console with workgroup traineeNN-2026-03-wg
--- Query the Firehose-delivered records (if the Glue table was created)
+-- In Athena console with workgroup $PREFIX-$BATCH-wg
+-- Replace $PREFIX and $BATCH with your values (e.g. trainee07 and 2026-03)
 
 SELECT
     vendor_id,
     payment_type,
     COUNT(*)                     AS trip_count,
     SUM(CAST(fare_amount AS DOUBLE)) AS total_fare
-FROM "traineeNN_2026_03_catalog"."firehose_taxi"
+FROM "$CATALOG"."firehose_taxi"
 GROUP BY vendor_id, payment_type
 ORDER BY vendor_id;
 ```
@@ -371,11 +381,11 @@ ORDER BY vendor_id;
 > Run it after your producer has pushed some data and Firehose has flushed (allow ~90 seconds):
 > ```bash
 > # Start the Firehose landing crawler
-> aws glue start-crawler --name traineeNN-2026-03-firehose-crawler
+> aws glue start-crawler --name $PREFIX-$BATCH-firehose-crawler
 >
 > # Poll until READY (takes ~1-2 minutes)
 > aws glue get-crawler \
->   --name traineeNN-2026-03-firehose-crawler \
+>   --name $PREFIX-$BATCH-firehose-crawler \
 >   --query 'Crawler.{State:State,LastStatus:LastCrawl.Status}'
 > ```
 > Once the crawler shows `"State": "READY"` and `"LastStatus": "SUCCEEDED"`, refresh Athena and the `firehose_taxi` table will appear.
@@ -387,14 +397,14 @@ ORDER BY vendor_id;
 ```bash
 # 1. Stream is ACTIVE
 aws kinesis describe-stream-summary \
-  --stream-name traineeNN-2026-03-stream \
+  --stream-name $PREFIX-$BATCH-stream \
   --query 'StreamDescriptionSummary.StreamStatus'
 
 # 2. Records were sent (check last 15 minutes)
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name IncomingRecords \
-  --dimensions Name=StreamName,Value=traineeNN-2026-03-stream \
+  --dimensions Name=StreamName,Value=$PREFIX-$BATCH-stream \
   --start-time $(date -u -d '15 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 900 \
@@ -402,7 +412,7 @@ aws cloudwatch get-metric-statistics \
   --query 'Datapoints[*].Sum'
 
 # 3. Parquet files exist in S3
-aws s3 ls s3://traineeNN-2026-03-firehose-landing/taxi/ --recursive | wc -l
+aws s3 ls s3://$PREFIX-$BATCH-firehose-landing/taxi/ --recursive | wc -l
 ```
 
 ---

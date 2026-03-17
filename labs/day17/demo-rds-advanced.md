@@ -11,10 +11,12 @@
 
 ```bash
 export AWS_PROFILE=aws-de-lab
+export PREFIX=trainee01   # change if demonstrating a different attendee
+export BATCH=2026-03
 aws sts get-caller-identity   # Must return Account: "<ACCOUNT_ID>"
 ```
 
-Navigate to the **RDS Console** — use the lab's `trainee01-2026-03-postgres` instance for live demos.
+Navigate to the **RDS Console** — use the lab's `$PREFIX-$BATCH-postgres` instance for live demos.
 
 ---
 
@@ -75,7 +77,7 @@ Standard relational workloads, existing licenses (Oracle/SQL Server), tight cost
 
 ### Demo: Show Multi-AZ in console
 
-1. Click `trainee01-2026-03-postgres` → **Configuration** tab
+1. Click `$PREFIX-$BATCH-postgres` → **Configuration** tab
 2. Show **Multi-AZ: No** — explain this is single-AZ for cost in the lab
 3. Click **Modify** → scroll to **Availability and durability** → select **Multi-AZ DB instance**
 4. Show the **cost warning** — it doubles the instance cost
@@ -125,9 +127,9 @@ Primary (read/write)
 
 ### Demo: Create a Read Replica (show steps, don't complete)
 
-1. Console → `trainee01-2026-03-postgres` → **Actions** → **Create read replica**
+1. Console → `$PREFIX-$BATCH-postgres` → **Actions** → **Create read replica**
 2. Walk through the form:
-   - **DB instance identifier:** `trainee01-2026-03-postgres-read-replica`
+   - **DB instance identifier:** `$PREFIX-$BATCH-postgres-read-replica`
    - **Destination region:** same or different
    - **Instance class:** can be smaller (read replicas scale independently)
    - **Multi-AZ:** can add a standby to the replica
@@ -207,9 +209,9 @@ Result: a NEW DB instance is created at the recovered point in time
 
 ### Demo: Show restore options
 
-1. Console → `trainee01-2026-03-postgres` → **Actions** → **Restore to point in time**
+1. Console → `$PREFIX-$BATCH-postgres` → **Actions** → **Restore to point in time**
 2. Set **Custom date and time** — pick a time 30 minutes ago
-3. Set a new identifier: `trainee01-2026-03-postgres-restored`
+2. Set a new identifier: `$PREFIX-$BATCH-postgres-restored`
 4. Walk through options (instance class, VPC, security group)
 5. Point out: this creates a **new instance** — it takes 15–30 minutes
 6. **Cancel** — don't proceed

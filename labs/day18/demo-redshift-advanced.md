@@ -11,10 +11,12 @@
 
 ```bash
 export AWS_PROFILE=aws-de-lab
+export PREFIX=trainee01   # change if demonstrating a different attendee
+export BATCH=2026-03
 aws sts get-caller-identity   # Must return Account: "<ACCOUNT_ID>"
 ```
 
-Use `trainee01-2026-03-redshift` for live demos in the console.
+Use `$PREFIX-$BATCH-redshift` for live demos in the console.
 
 ---
 
@@ -57,7 +59,7 @@ RA3 separates compute from storage:
 - **Managed storage:** Data lives in S3, cached in fast local NVMe on the node
 - **You pay for:** Compute (per hour) + Managed storage (per GB-month in S3)
 
-Demo in console: Click `trainee01-2026-03-redshift` → **Cluster performance** → show the **Managed storage** section.
+Demo in console: Click `$PREFIX-$BATCH-redshift` → **Cluster performance** → show the **Managed storage** section.
 
 ---
 
@@ -92,8 +94,8 @@ default        10%         5              none         all others
 
 ### Demo: View WLM configuration
 
-1. Console → `trainee01-2026-03-redshift` → **Properties** tab → scroll to **Workload management**
-2. Click the parameter group: `trainee01-2026-03-rg`
+1. Console → `$PREFIX-$BATCH-redshift` → **Properties** tab → scroll to **Workload management**
+2. Click the parameter group: `$PREFIX-$BATCH-rg`
 3. Show the current WLM JSON config
 4. Walk through what each field means: `query_groups`, `user_groups`, `memory_percent_to_use`, `max_execution_time`
 
@@ -203,7 +205,7 @@ Change node type OR make a large scaling change:
 
 ### Demo: Show resize in console
 
-1. Console → `trainee01-2026-03-redshift` → **Actions** → **Resize**
+1. Console → `$PREFIX-$BATCH-redshift` → **Actions** → **Resize**
 2. Show **Elastic resize** tab — select new node count
 3. Show estimated time
 4. Switch to **Classic resize** — show node type dropdown

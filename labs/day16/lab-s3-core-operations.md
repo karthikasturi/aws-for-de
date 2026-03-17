@@ -46,11 +46,18 @@ Expected output:
 {
     "UserId": "AIDAXXXXXXXXXXXXXXXXX",
     "Account": "<ACCOUNT_ID>",
-    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/traineeNN"
+    "Arn": "arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX"
 }
 ```
 
 > Replace `traineeNN` with your actual attendee ID throughout this lab.
+
+```bash
+export PREFIX=traineeNN   # ← replace traineeNN with your ID, e.g. trainee07
+export BATCH=2026-03
+export AWS_PROFILE=aws-de-lab
+export REGION=ap-south-1
+```
 
 ---
 
@@ -59,8 +66,8 @@ Expected output:
 In this lab you will work entirely within your own pre-provisioned S3 buckets. You will practice the full object lifecycle — upload, version, archive, secure, and monitor — using both the AWS Console and the AWS CLI.
 
 > **Your bucket namespace**  
-> All your buckets follow the pattern: `traineeNN-2026-03-<descriptor>`  
-> Replace `traineeNN` with your actual attendee ID throughout this lab (e.g. `trainee05`).
+> All your buckets follow the pattern: `$PREFIX-$BATCH-<descriptor>`  
+> Set `PREFIX` in the export block above (e.g. `export PREFIX=trainee05`).
 
 ---
 
@@ -70,13 +77,13 @@ Before this lab starts, the instructor has created these 7 buckets for each atte
 
 | Bucket name | Purpose | Versioning | Lifecycle |
 |---|---|---|---|
-| `traineeNN-2026-03-raw` | Raw ingested data | ✅ Enabled | None |
-| `traineeNN-2026-03-transformed` | Processed/clean data | ✅ Enabled | None |
-| `traineeNN-2026-03-scripts` | Glue/EMR job scripts | ✅ Enabled | None |
-| `traineeNN-2026-03-logs` | Application logs | ❌ Off | Delete after **30 days** |
-| `traineeNN-2026-03-athena-output` | Athena query results | ❌ Off | Delete after **7 days** |
-| `traineeNN-2026-03-glue-temp` | Glue temp storage | ❌ Off | Delete after **3 days** |
-| `traineeNN-2026-03-firehose-landing` | Kinesis Firehose output | ❌ Off | None |
+| `$PREFIX-$BATCH-raw` | Raw ingested data | ✅ Enabled | None |
+| `$PREFIX-$BATCH-transformed` | Processed/clean data | ✅ Enabled | None |
+| `$PREFIX-$BATCH-scripts` | Glue/EMR job scripts | ✅ Enabled | None |
+| `$PREFIX-$BATCH-logs` | Application logs | ❌ Off | Delete after **30 days** |
+| `$PREFIX-$BATCH-athena-output` | Athena query results | ❌ Off | Delete after **7 days** |
+| `$PREFIX-$BATCH-glue-temp` | Glue temp storage | ❌ Off | Delete after **3 days** |
+| `$PREFIX-$BATCH-firehose-landing` | Kinesis Firehose output | ❌ Off | None |
 
 All buckets have:
 - Public access **fully blocked** (all four ACL/policy settings)
@@ -95,7 +102,7 @@ All buckets have:
 
 ### 1.2 Inspect your raw bucket
 
-1. Click `traineeNN-2026-03-raw`
+1. Click `$PREFIX-$BATCH-raw`
 2. Click the **Properties** tab — scroll through:
    - **Bucket Versioning** → should show `Enabled`
    - **Default encryption** → should show `SSE-KMS` with your batch key alias
@@ -106,13 +113,13 @@ All buckets have:
 
 ### 1.3 Inspect a bucket with a lifecycle rule
 
-1. Click `traineeNN-2026-03-logs`
+1. Click `$PREFIX-$BATCH-logs`
 2. Click the **Management** tab → **Lifecycle rules**
 3. Click the `delete-after-30-days` rule — observe:
    - **Filter scope:** all objects (empty prefix = bucket-wide)
    - **Expiration:** 30 days after creation
    - **Transition rules:** none
-4. Repeat for `traineeNN-2026-03-athena-output` (7-day delete) and `traineeNN-2026-03-glue-temp` (3-day delete)
+4. Repeat for `$PREFIX-$BATCH-athena-output` (7-day delete) and `$PREFIX-$BATCH-glue-temp` (3-day delete)
 
 > **Discussion point:** Why does the Athena output bucket expire objects after 7 days? Why does glue-temp expire after 3?
 
@@ -133,7 +140,7 @@ CMT,2024-02-01 12:45:00,2024-02-01 13:10:00,1,5.80,-73.9772,40.7527,-73.8900,40.
 
 ### 2.2 Upload via Console
 
-1. In your `traineeNN-2026-03-raw` bucket, click **Upload**
+1. In your `$PREFIX-$BATCH-raw` bucket, click **Upload**
 2. Click **Add files** → select `trip_update.csv`
 3. Expand **Properties** (before clicking Upload):
    - **Storage class:** keep as `Standard`
@@ -158,7 +165,7 @@ CMT,2024-02-01 12:45:00,2024-02-01 13:10:00,1,5.80,-73.9772,40.7527,-73.8900,40.
 ### 2.5 Copy object to another prefix
 
 1. Select `trip_update.csv` → click **Actions** → **Copy**
-2. Set destination: `s3://traineeNN-2026-03-raw/archive/trip_update.csv`
+2. Set destination: `s3://$PREFIX-$BATCH-raw/archive/trip_update.csv`
 3. Click **Copy**
 4. Browse into the `archive/` prefix — confirm the copy exists
 
@@ -213,15 +220,15 @@ To "restore" an older version, you simply copy it on top of the current version:
 ```bash
 # CLI method — get the version ID of the version you want to restore
 aws s3api list-object-versions \
-  --bucket traineeNN-2026-03-raw \
+  --bucket $PREFIX-$BATCH-raw \
   --prefix trip_update.csv \
   --query 'Versions[*].[VersionId,LastModified]' \
   --output table
 
 # Copy the desired version back to the same key (this creates a new latest version)
 aws s3api copy-object \
-  --bucket traineeNN-2026-03-raw \
-  --copy-source "traineeNN-2026-03-raw/trip_update.csv?versionId=<VERSION_ID>" \
+  --bucket $PREFIX-$BATCH-raw \
+  --copy-source "$PREFIX-$BATCH-raw/trip_update.csv?versionId=<VERSION_ID>" \
   --key trip_update.csv
 ```
 
@@ -242,7 +249,7 @@ You will add a lifecycle rule to your `raw` bucket to transition objects older t
 
 ### 4.1 Create the rule in the Console
 
-1. In `traineeNN-2026-03-raw` → **Management** → **Lifecycle rules** → **Create lifecycle rule**
+1. In `$PREFIX-$BATCH-raw` → **Management** → **Lifecycle rules** → **Create lifecycle rule**
 2. Fill in:
 
 | Field | Value |
@@ -293,13 +300,13 @@ The S3 storage class hierarchy from most to least frequent access (and highest t
 
 ### 5.1 View encryption configuration in the Console
 
-1. Go to `traineeNN-2026-03-raw` → **Properties** → **Default encryption**
+1. Go to `$PREFIX-$BATCH-raw` → **Properties** → **Default encryption**
 2. Note:
    - Encryption type: **SSE-KMS**
-   - AWS KMS key: the ARN of your batch KMS key (`alias/aws-de-lab-2026-03-traineeNN`)
+   - AWS KMS key: the ARN of your batch KMS key (`alias/aws-de-lab-$BATCH-$PREFIX`)
    - **Bucket Key:** Enabled (reduces KMS API calls by generating a short-lived bucket-level key — reduces cost)
 
-3. Repeat for `traineeNN-2026-03-scripts` — same configuration
+3. Repeat for `$PREFIX-$BATCH-scripts` — same configuration
 
 ### 5.2 Inspect the KMS key via CLI
 
@@ -311,7 +318,7 @@ aws kms list-aliases --query "Aliases[?contains(AliasName, 'aws-de-lab')]" --out
 
 # Describe the key
 aws kms describe-key \
-  --key-id "alias/aws-de-lab-2026-03-traineeNN" \
+  --key-id "alias/aws-de-lab-$BATCH-$PREFIX" \
   --query 'KeyMetadata.{KeyId:KeyId, Description:Description, KeyState:KeyState, KeyRotation:KeyRotationStatus}' \
   --output table
 ```
@@ -321,13 +328,13 @@ aws kms describe-key \
 ### 5.3 Try to disable the KMS key (expect failure)
 
 ```bash
-aws kms disable-key --key-id "alias/aws-de-lab-2026-03-traineeNN"
+aws kms disable-key --key-id "alias/aws-de-lab-$BATCH-$PREFIX"
 ```
 
 Expected response:
 ```
 An error occurred (AccessDeniedException) when calling the DisableKey operation:
-User: arn:aws:iam::<ACCOUNT_ID>:user/traineeNN is not authorized to perform: kms:DisableKey
+User: arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX is not authorized to perform: kms:DisableKey
 ```
 
 Your attendee policy only grants `kms:ListKeys`, `kms:DescribeKey`, and `kms:ListAliases` — mutating KMS resources is correctly blocked.
@@ -340,11 +347,11 @@ Server access logging records all requests made to your bucket. You will enable 
 
 ### 6.1 Enable via Console
 
-1. Go to `traineeNN-2026-03-raw` → **Properties**
+1. Go to `$PREFIX-$BATCH-raw` → **Properties**
 2. Scroll to **Server access logging** → click **Edit**
 3. Set:
    - **Server access logging:** Enable
-   - **Target bucket:** `traineeNN-2026-03-logs`
+   - **Target bucket:** `$PREFIX-$BATCH-logs`
    - **Target prefix:** `s3-access-logs/raw/`
 4. Click **Save changes**
 
@@ -359,12 +366,12 @@ Server access logging records all requests made to your bucket. You will enable 
 > **Wait 5–15 minutes** — access logs are delivered on a best-effort basis, typically within 15 minutes.
 
 After waiting:
-1. Go to `traineeNN-2026-03-logs`
+1. Go to `$PREFIX-$BATCH-logs`
 2. Browse the `s3-access-logs/raw/` prefix
 3. Download a log file — each line is one request:
 
 ```
-traineeNN-2026-03-raw [15/Feb/2024:08:30:01 +0000] 203.0.113.5 arn:aws:iam::<ACCOUNT_ID>:user/traineeNN REST.PUT.OBJECT trip_update.csv "PUT /trip_update.csv HTTP/1.1" 200 - - 1234 120 - "-" "aws-cli/2.x" - ...
+$PREFIX-$BATCH-raw [15/Feb/2024:08:30:01 +0000] 203.0.113.5 arn:aws:iam::<ACCOUNT_ID>:user/$PREFIX REST.PUT.OBJECT trip_update.csv "PUT /trip_update.csv HTTP/1.1" 200 - - 1234 120 - "-" "aws-cli/2.x" - ...
 ```
 
 ---
@@ -384,7 +391,7 @@ This part proves that S3 resource isolation works — your prefix-scoped IAM pol
 export AWS_PROFILE=aws-de-lab
 
 # Your own bucket — should succeed
-aws s3 ls s3://traineeNN-2026-03-raw/
+aws s3 ls s3://$PREFIX-$BATCH-raw/
 
 # Another attendee's bucket — should fail
 aws s3 ls s3://trainee01-2026-03-raw/
@@ -401,7 +408,7 @@ Access Denied
 Walk through the IAM policy evaluation for `s3:ListBucket` on `trainee01-2026-03-raw`:
 
 1. **Explicit Deny?** → The `DenyIAMWriteOrgAccount` statement denies IAM actions only. No S3 deny exists.
-2. **Explicit Allow?** → The `S3OwnBuckets` statement allows `s3:*` on `arn:aws:s3:::traineeNN-*`. The bucket `trainee01-2026-03-raw` does NOT match your prefix (`traineeNN-*`).
+2. **Explicit Allow?** → The `S3OwnBuckets` statement allows `s3:*` on `arn:aws:s3:::$PREFIX-*`. The bucket `trainee01-2026-03-raw` does NOT match your prefix (`$PREFIX-*`).
 3. **Default implicit deny** → No Allow matches → **AccessDenied**. ✅
 
 ### 7.4 Presigned URLs — Temporary Object Sharing
@@ -410,11 +417,11 @@ A presigned URL embeds credentials that allow temporary, unauthenticated access 
 
 ```bash
 # Generate a presigned URL valid for 5 minutes (300 seconds)
-aws s3 presign s3://traineeNN-2026-03-raw/trip_update.csv \
+aws s3 presign s3://$PREFIX-$BATCH-raw/trip_update.csv \
   --expires-in 300
 
 # Output will look like:
-# https://traineeNN-2026-03-raw.s3.ap-south-1.amazonaws.com/trip_update.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256&...
+# https://$PREFIX-$BATCH-raw.s3.ap-south-1.amazonaws.com/trip_update.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256&...
 ```
 
 1. Copy the output URL and open it in a browser **incognito window** (no AWS session)
@@ -431,10 +438,10 @@ Quick reference for the most common S3 CLI patterns you will use throughout the 
 
 ```bash
 export AWS_PROFILE=aws-de-lab
-export BUCKET="traineeNN-2026-03-raw"
+export BUCKET="$PREFIX-$BATCH-raw"
 
 # List all your buckets
-aws s3 ls | grep traineeNN
+aws s3 ls | grep $PREFIX
 
 # List objects in a bucket
 aws s3 ls s3://$BUCKET/
@@ -453,7 +460,7 @@ aws s3 sync ./local-folder/ s3://$BUCKET/folder/
 
 # Copy between buckets (within your prefix)
 aws s3 cp s3://$BUCKET/datasets/trip_update.csv \
-  s3://traineeNN-2026-03-transformed/datasets/trip_update.csv
+  s3://$PREFIX-$BATCH-transformed/datasets/trip_update.csv
 
 # Delete an object
 aws s3 rm s3://$BUCKET/datasets/trip_update.csv
@@ -502,7 +509,7 @@ Before finishing, verify:
 | **Bucket Key** | Reduces KMS calls by caching a short-lived bucket-level data key |
 | **Access logging** | Per-request audit log delivered to a target bucket |
 | **Presigned URL** | Time-limited shareable link with embedded credentials |
-| **Prefix isolation** | IAM policy restricts access to `traineeNN-*` ARNs; all else is implicitly denied |
+| **Prefix isolation** | IAM policy restricts access to `$PREFIX-*` ARNs; all else is implicitly denied |
 
 ---
 
