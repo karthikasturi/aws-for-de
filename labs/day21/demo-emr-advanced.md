@@ -80,20 +80,20 @@ Node types:
 ```
 VPC:       [lab VPC]
 Subnet:    private subnet in ap-south-1a
-Security:  traineeNN-2026-03-emr-master (master)
-           traineeNN-2026-03-emr-slave  (core + task)
+Security:  aws-de-lab-2026-03-emr-master (master)
+           aws-de-lab-2026-03-emr-slave  (core + task)
 ```
 
 **Security:**
 ```
 EC2 key pair:        (lab key or none for step-only usage)
-IAM service role:    traineeNN-2026-03-emr-service-role
-IAM instance profile: traineeNN-2026-03-emr-instance-profile
+IAM service role:    aws-de-lab-2026-03-emr-service-role
+IAM instance profile: aws-de-lab-2026-03-emr-ec2-profile
 ```
 
 **Logging:**
 ```
-S3 log URI:  s3://traineeNN-2026-03-logs/emr/
+S3 log URI:  s3://trainee01-2026-03-logs/emr/
 ```
 
 **Auto-termination:**
@@ -105,7 +105,7 @@ Idle timeout: 7200 seconds (2 hours)
 
 **Bootstrap actions:**
 ```
-s3://traineeNN-2026-03-scripts/emr/bootstrap.sh
+s3://trainee01-2026-03-scripts/emr/bootstrap.sh
 — Runs on every node before Spark starts
 — Used to: install Python packages, configure OS settings, pre-download data
 ```
@@ -118,14 +118,14 @@ s3://traineeNN-2026-03-scripts/emr/bootstrap.sh
 ```bash
 # This is what Terraform generated for the lab cluster (simplified)
 aws emr create-cluster \
-  --name "traineeNN-2026-03-cluster" \
+  --name "aws-de-lab-2026-03-emr-spark" \
   --release-label emr-6.15.0 \
   --applications Name=Spark Name=Hadoop \
   --ec2-attributes '{
     "SubnetId": "subnet-xxxxxxxxxxxxxxxxx",
     "EmrManagedMasterSecurityGroup": "sg-master-id",
     "EmrManagedSlaveSecurityGroup":  "sg-slave-id",
-    "InstanceProfile": "traineeNN-2026-03-emr-instance-profile"
+    "InstanceProfile": "aws-de-lab-2026-03-emr-ec2-profile"
   }' \
   --instance-groups '[
     {
@@ -145,10 +145,10 @@ aws emr create-cluster \
   ]' \
   --bootstrap-actions '[{
     "Name": "install-packages",
-    "Path": "s3://traineeNN-2026-03-scripts/emr/bootstrap.sh"
+    "Path": "s3://trainee01-2026-03-scripts/emr/bootstrap.sh"
   }]' \
-  --log-uri "s3://traineeNN-2026-03-logs/emr/" \
-  --service-role traineeNN-2026-03-emr-service-role \
+  --log-uri "s3://trainee01-2026-03-logs/emr/" \
+  --service-role aws-de-lab-2026-03-emr-service-role \
   --auto-termination-policy '{"IdleTimeout": 7200}' \
   --region ap-south-1
 ```
@@ -228,13 +228,13 @@ S3 / Glue Catalog
 2. Key settings:
    - **Authentication:** AWS SSO (recommended) or IAM
    - **VPC and subnets:** must be in same VPC as cluster
-   - **S3 location for notebooks:** `s3://traineeNN-2026-03-logs/notebooks/`
+   - **S3 location for notebooks:** `s3://<attendee-prefix>-2026-03-logs/notebooks/` (e.g. `s3://trainee01-2026-03-logs/notebooks/`)
    - **Service role:** needs S3 read/write + Glue catalog access
 
 ### Demo: Workspace inside Studio (if a studio is pre-created)
 
 1. Open the studio URL → **Create workspace**
-2. Attach to the lab cluster `traineeNN-2026-03-cluster`
+2. Attach to the lab cluster `aws-de-lab-2026-03-emr-spark`
 3. Create a new notebook → select **PySpark** kernel
 4. Type and run a cell:
 

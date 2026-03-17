@@ -136,7 +136,7 @@ aws emr describe-cluster \
 ### View in console
 
 1. Open **AWS Console** → **Amazon EMR** → **Clusters**
-2. Click your cluster (it will be named `traineeNN-2026-03-cluster` — ask instructor for the exact name)
+2. Click your cluster (the shared lab cluster is named `aws-de-lab-2026-03-emr-spark` — the instructor will also share this as `$CLUSTER_ID`)
 3. Explore tabs:
    - **Summary:** Release, Applications, Log URI
    - **Hardware:** instance groups (master + core)
@@ -186,9 +186,9 @@ Both outputs are:
 
 | Argument | Value (your lab) |
 |---|---|
-| `--source-bucket` | `traineeNN-2026-03-transformed` |
-| `--target-bucket` | `traineeNN-2026-03-logs` |
-| `--database-name` | `traineeNN_2026-03_catalog` |
+| `--source-bucket` | `$PREFIX-$BATCH-transformed` |
+| `--target-bucket` | `$PREFIX-$BATCH-logs` |
+| `--database-name` | `$PREFIX_$BATCH_catalog` (e.g. `trainee01_2026_03_catalog`) |
 
 > Note: The script writes analytics output to the `logs` bucket (`taxi_analytics/` prefix), not the `transformed` bucket. This separates raw, transformed, and analytics tiers.
 
@@ -291,13 +291,16 @@ taxi_analytics/payment_type/pickup_year=2024/pickup_month=1/part-00000-xxxx.parq
 
 ### Verify using Athena
 
-In the Athena console (workgroup `traineeNN-2026-03-wg`):
+In the Athena console (workgroup `$PREFIX-$BATCH-wg`):
+
+> **Athena SQL note:** Replace `traineeNN_2026_03` with your actual catalog prefix (e.g. `trainee05_2026_03`) and `traineeNN-2026-03` with your bucket prefix before running.
 
 ```sql
 -- First: create an external table pointing at the hourly analytics output
 -- (the Glue crawler would normally do this automatically)
+-- Replace traineeNN_2026_03 with your prefix, e.g. trainee05_2026_03
 CREATE EXTERNAL TABLE IF NOT EXISTS
-  "traineeNN_2026-03_catalog"."taxi_hourly_analytics"
+  "traineeNN_2026_03_catalog"."taxi_hourly_analytics"
 (
   pickup_hour       INT,
   trip_count        BIGINT,
@@ -313,7 +316,7 @@ TBLPROPERTIES ('parquet.compress'='SNAPPY');
 
 ```sql
 -- Load partitions
-MSCK REPAIR TABLE "traineeNN_2026-03_catalog"."taxi_hourly_analytics";
+MSCK REPAIR TABLE "traineeNN_2026_03_catalog"."taxi_hourly_analytics";
 ```
 
 ```sql
@@ -322,7 +325,7 @@ SELECT
     pickup_hour,
     trip_count,
     ROUND(avg_fare_usd, 2) AS avg_fare
-FROM "traineeNN_2026-03_catalog"."taxi_hourly_analytics"
+FROM "traineeNN_2026_03_catalog"."taxi_hourly_analytics"
 ORDER BY trip_count DESC
 LIMIT 10;
 ```
